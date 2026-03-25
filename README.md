@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="src/media/nima.png" alt="🧬🌐『 𝖭𝖬𝖣 𝖠𝖷𝖨𝖲 』🌐🧬" width="150" style="border-radius: 50%"/>
+<img src="https://i.ibb.co/99ppnpMg/1774405153533.png" alt="🧬🌐『 𝖭𝖬𝖣 𝖠𝖷𝖨𝖲 』🌐🧬" width="150" style="border-radius: 50%"/>
 
 # 🧬🌐『 𝖭𝖬𝖣 𝖠𝖷𝖨𝖲 』🌐🧬 WhatsApp Bot
 
