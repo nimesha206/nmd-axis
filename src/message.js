@@ -115,7 +115,7 @@ async function GroupParticipantsUpdate(nimesha, { id, participants, author, acti
 					profile = 'https://telegra.ph/file/95670d63378f7f4210f03.png';
 				}
 				let messageText;
-				if (action === 'add') {
+				if (action === 'add' || action === 'invite') {
 					if (db.groups[id].welcome) messageText = db.groups[id]?.text?.setwelcome || `╔══════════════════════╗
 ║  *${metadata.subject}*  ║
 ╚══════════════════════╝
