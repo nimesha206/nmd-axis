@@ -3548,7 +3548,23 @@ module.exports = nimesha = async (nimesha, m, msg, store) => {
 				if (!isLimit) return m.reply(mess.limit)
 				if (!text) return m.reply(`උදාහරණ: ${prefix + command} TikTok URL`)
 				if (!text.includes('tiktok.com') && !text.includes('vm.tiktok') && !text.includes('vt.tiktok')) return m.reply('URL TikTok ප්‍රතිඵලය ඇතුළත් නෑ!')
-				const ttVidStatus = await m.reply(`⬇ *බාගනිමින්...*\n━━━━━━━━━━━━━━━━━━━━━━\n🎵 *TikTok Video:* ${text.substring(0, 45)}...\n━━━━━━━━━━━━━━━━━━━━━━`)
+
+				// Watermark select buttons
+				await nimesha.sendMessage(m.chat, {
+					text: `🎵 *TikTok Download*\n━━━━━━━━━━━━━━━━━━━━━━\n🔗 ${text.substring(0, 45)}...\n━━━━━━━━━━━━━━━━━━━━━━\n\nකෙසේ download කරන්නද?`,
+					buttons: [
+						{ buttonId: `${prefix}tt_nowm ${text}`, buttonText: { displayText: '✅ Watermark නැතිව' }, type: 1 },
+						{ buttonId: `${prefix}tt_wm ${text}`, buttonText: { displayText: '💧 Watermark සමඟ' }, type: 1 }
+					],
+					footerText: '🧬🌐 NMD AXIS'
+				}, { quoted: m })
+			}
+			break
+			case 'tt_nowm': case 'tt_wm': {
+				if (!isLimit) return m.reply(mess.limit)
+				if (!text) return m.reply(`උදාහරණ: ${prefix + command} TikTok URL`)
+				const _isNoWm = command === 'tt_nowm'
+				const ttVidStatus = await m.reply(`⬇ *බාගනිමින්...*\n━━━━━━━━━━━━━━━━━━━━━━\n🎵 *TikTok Video:* ${text.substring(0, 45)}...\n${_isNoWm ? '✅ Watermark නැතිව' : '💧 Watermark සමඟ'}\n━━━━━━━━━━━━━━━━━━━━━━`)
 				try {
 					const hasil = await tiktokDownload(text)
 
@@ -3566,8 +3582,10 @@ module.exports = nimesha = async (nimesha, m, msg, store) => {
 							caption: `*📍 ${hasil.title || ''}*\n*🎃 ${hasil.author || ''}*`
 						}, { quoted: m })
 					} else {
-						const videoUrl = _fixUrl(hasil.url)
-						if (!videoUrl) throw new Error('invalid video url: ' + hasil.url)
+						// watermark / no-watermark select
+						const _rawUrl = (_isNoWm ? hasil.url : (hasil.urlWatermark || hasil.url))
+						const videoUrl = _fixUrl(_rawUrl)
+						if (!videoUrl) throw new Error('invalid video url: ' + _rawUrl)
 
 						// Buffer download කරලා send (URL send fail වෙද්දී)
 						let videoPayload;
@@ -3580,7 +3598,23 @@ module.exports = nimesha = async (nimesha, m, msg, store) => {
 							if (!vRes.ok) throw new Error(`HTTP ${vRes.status}`);
 							const vBuf = Buffer.from(await vRes.arrayBuffer());
 							if (vBuf.length < 10000) throw new Error('file too small');
-							videoPayload = vBuf;
+
+							// H.265/HEVC → H.264 re-encode (WhatsApp black video fix)
+							let finalBuf = vBuf;
+							try {
+								const { execSync: _ffExec } = require('child_process');
+								const _os = require('os'); const _fs = require('fs');
+								const _tIn = _os.tmpdir() + '/tt_in_' + Date.now() + '.mp4';
+								const _tOut = _os.tmpdir() + '/tt_out_' + Date.now() + '.mp4';
+								_fs.writeFileSync(_tIn, vBuf);
+								_ffExec(`ffmpeg -y -i "${_tIn}" -c:v libx264 -preset fast -crf 28 -c:a aac -movflags +faststart "${_tOut}"`, { timeout: 120000, stdio: 'pipe' });
+								finalBuf = _fs.readFileSync(_tOut);
+								try { _fs.unlinkSync(_tIn); _fs.unlinkSync(_tOut); } catch {}
+								console.log('[TT DL] ffmpeg re-encode OK, size:', finalBuf.length);
+							} catch(_ffErr) {
+								console.log('[TT DL] ffmpeg skip:', _ffErr.message);
+							}
+							videoPayload = finalBuf;
 						} catch(dlErr) {
 							console.log('[TT DL] buffer fail, try url direct:', dlErr.message);
 							videoPayload = { url: videoUrl };
