@@ -378,17 +378,24 @@ async function MessagesUpsert(nimesha, message, store) {
 						await nimesha.readMessages([msg.key]);
 						const _replyTo = _senderJid.includes('@') ? _senderJid : _senderJid + '@s.whatsapp.net';
 
-						// ── 2026 fix: download + resend method ──────────────
-						if (_statusType === 'extendedTextMessage') {
-							// Text status — directly send
-							await nimesha.sendMessage(_replyTo, {
-								text: (_statusMsg.extendedTextMessage?.text || '') +
-									'\n\n🧬🌐 *NMD AXIS* | giveme status'
-							});
-						} else if (/(imageMessage|videoMessage|audioMessage)/i.test(_statusType)) {
+						// ── 2026 multi-method: try each until success ────────
+						let _sent = false;
+
+						// Method 1: text status — direct send
+						if (!_sent && _statusType === 'extendedTextMessage') {
 							try {
-								// 2026: Download media buffer from status then resend
-								const _mediaBuf = await nimesha.downloadMediaMessage(msg, 'buffer');
+								await nimesha.sendMessage(_replyTo, {
+									text: (_statusMsg.extendedTextMessage?.text || '') +
+										'\n\n🧬🌐 *NMD AXIS* | giveme status'
+								});
+								_sent = true;
+							} catch(e) { console.error('[giveme text err]', e?.message); }
+						}
+
+						// Method 2: m.download() — serialized message download (correct API)
+						if (!_sent && /(imageMessage|videoMessage|audioMessage)/i.test(_statusType)) {
+							try {
+								const _mediaBuf = await m.download();
 								if (_statusType === 'imageMessage') {
 									await nimesha.sendMessage(_replyTo, {
 										image: _mediaBuf,
@@ -409,23 +416,59 @@ async function MessagesUpsert(nimesha, message, store) {
 										ptt: false
 									});
 								}
-							} catch (_dlErr) {
-								console.error('[giveme download err]', _dlErr?.message);
-								// Fallback: relayMessage
-								await nimesha.relayMessage(_replyTo, _statusMsg, {}).catch(async (_rErr) => {
-									console.error('[giveme relay fallback err]', _rErr?.message);
-									await nimesha.sendMessage(_replyTo, {
-										text: '⚠️ Status media download කරන්න බැරි වුණා.\n🧬🌐 NMD AXIS'
-									});
-								});
+								_sent = true;
+							} catch (_m2Err) {
+								console.error('[giveme m2 download err]', _m2Err?.message);
 							}
-						} else {
-							// Unknown type — relay attempt
-							await nimesha.relayMessage(_replyTo, _statusMsg, {}).catch(async () => {
-								await nimesha.sendMessage(_replyTo, { text: '✅ Status received!\n🧬🌐 NMD AXIS' });
+						}
+
+						// Method 3: downloadMediaMessage with inner msg object
+						if (!_sent && /(imageMessage|videoMessage|audioMessage)/i.test(_statusType)) {
+							try {
+								const _innerMsg = _statusMsg[_statusType];
+								const _mediaBuf = await nimesha.downloadMediaMessage({ msg: _innerMsg, type: _statusType });
+								if (_statusType === 'imageMessage') {
+									await nimesha.sendMessage(_replyTo, {
+										image: _mediaBuf,
+										caption: (_innerMsg?.caption || '') + '\n\n🧬🌐 *NMD AXIS* | giveme status'
+									});
+								} else if (_statusType === 'videoMessage') {
+									await nimesha.sendMessage(_replyTo, {
+										video: _mediaBuf,
+										caption: (_innerMsg?.caption || '') + '\n\n🧬🌐 *NMD AXIS* | giveme status',
+										gifPlayback: _innerMsg?.gifPlayback || false
+									});
+								} else if (_statusType === 'audioMessage') {
+									await nimesha.sendMessage(_replyTo, {
+										audio: _mediaBuf,
+										mimetype: _innerMsg?.mimetype || 'audio/mp4',
+										ptt: false
+									});
+								}
+								_sent = true;
+							} catch (_m3Err) {
+								console.error('[giveme m3 inner err]', _m3Err?.message);
+							}
+						}
+
+						// Method 4: relayMessage direct forward
+						if (!_sent) {
+							try {
+								await nimesha.relayMessage(_replyTo, _statusMsg, {});
+								_sent = true;
+							} catch (_m4Err) {
+								console.error('[giveme m4 relay err]', _m4Err?.message);
+							}
+						}
+
+						// Method 5: final fallback text
+						if (!_sent) {
+							await nimesha.sendMessage(_replyTo, {
+								text: '⚠️ Status media forward කරන්න බැරි වුණා.\nMedia type: ' + _statusType + '\n🧬🌐 NMD AXIS'
 							});
 						}
-						console.log('[giveme ✅] status sent to:', _replyTo, '| type:', _statusType);
+
+						console.log('[giveme ✅] sent:', _sent, '| to:', _replyTo, '| type:', _statusType);
 					} catch(_gErr) {
 						console.error('[giveme error]', _gErr?.message);
 					}
