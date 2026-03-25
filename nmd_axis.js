@@ -900,6 +900,39 @@ module.exports = nmd_axis = async (nimesha, m, msg, store) => {
         const text = args.join(' ').trim();
         const q = text;
 
+        // ══════════════════════════════════════════════════════
+        // ════════ AUTO STATUS VIEW + REACT (2026 FIX) ════════
+        // ══════════════════════════════════════════════════════
+        // NOTE: Must be BEFORE !isCmd return — status msgs have no cmd
+        if (m.key && m.key.remoteJid === 'status@broadcast' && !m.fromMe) {
+            try {
+                if (set.autostatus) {
+                    try {
+                        await nimesha.readMessages([m.key]);
+                        console.log(`👁️ AutoStatus View - @${(m.key.participant || m.sender || '').split('@')[0]}`);
+                        if (set.autostatusreact) {
+                            const emoji = getRandomEmoji();
+                            const _reactTo = m.key.participant || m.sender;
+                            if (_reactTo) {
+                                await nimesha.sendMessage(
+                                    _reactTo,
+                                    { react: { text: emoji, key: m.key } }
+                                ).catch(e => console.log('[AutoStatus react err]', e.message));
+                                console.log(`❤️ AutoStatus React - ${emoji} to ${_reactTo.split('@')[0]}`);
+                            }
+                        }
+                    } catch (e) {
+                        if (e?.message?.includes('rate-overlimit')) {
+                            await new Promise(r => setTimeout(r, 3000));
+                            await nimesha.readMessages([m.key]).catch(() => {});
+                        } else {
+                            console.log('[AutoStatus view err]', e.message);
+                        }
+                    }
+                }
+            } catch (e) { console.log('AutoStatus handler error:', e.message); }
+        }
+
         // prefix නැතිව commands execute නොකරනවා
         // isCmd false නම් (prefix නෑ, button response නෑ) — early return
         if (!isCmd) return;
@@ -1912,37 +1945,6 @@ module.exports = nmd_axis = async (nimesha, m, msg, store) => {
             }, { quoted: m });
         }
 
-        // ══════════════════════════════════════════════════════
-        // ════════ AUTO STATUS VIEW + REACT ════════════════════
-        // ══════════════════════════════════════════════════════
-        // 2026 fix: m.key check (single msg) — m.messages නෑ
-        if (m.key && m.key.remoteJid === 'status@broadcast') {
-            try {
-                if (set.autostatus) {
-                    try {
-                        // Status ස්වයංක්‍රීයව read/view කරනවා
-                        await nimesha.readMessages([m.key]);
-                        console.log(`👁️ AutoStatus View - @${(m.key.participant || '').split('@')[0]}`);
-                        // autostatusreact enabled නම් react කරනවා
-                        if (set.autostatusreact) {
-                            const emoji = getRandomEmoji();
-                            await nimesha.sendMessage(
-                                m.key.participant || m.key.remoteJid,
-                                { react: { text: emoji, key: m.key } }
-                            ).catch(() => {});
-                            console.log(`❤️ AutoStatus React - ${emoji}`);
-                        }
-                    } catch (e) {
-                        if (e.message?.includes('rate-overlimit')) {
-                            await new Promise(r => setTimeout(r, 2000));
-                            await nimesha.readMessages([m.key]).catch(() => {});
-                        } else {
-                            console.log('[AutoStatus view err]', e.message);
-                        }
-                    }
-                }
-            } catch (e) { console.log('AutoStatus handler error:', e.message); }
-        }
 
         if (m.message && m.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
             try { await storeMessage(m); } catch (e) {}

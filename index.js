@@ -366,7 +366,19 @@ server.listen(PORT, () => {
 	console.log('🧬🌐『 𝖭𝖬𝖣 𝖠𝖷𝖨𝖲 』🌐🧬 [MINI BOT] ක්‍රියාකාරී වී ඇත!');
 });
 
+// reconnect attempt counter
+let _reconnectCount = 0;
+const _MAX_RECONNECT_DELAY = 60000;
+
 async function startnimaBot() {
+	// Old socket cleanup — memory leak prevent
+	if (global.nimaInstance) {
+		try {
+			global.nimaInstance.ev.removeAllListeners();
+			global.nimaInstance.ws?.close?.();
+		} catch(_) {}
+		global.nimaInstance = null;
+	}
 	pairingStarted = false;
 	phoneNumber = global.number_bot || null;
 
@@ -444,17 +456,17 @@ async function startnimaBot() {
 		syncFullHistory: false,
 		maxMsgRetryCount: 15,
 		msgRetryCounterCache,
-		retryRequestDelayMs: 10,
-		defaultQueryTimeoutMs: 0,
-		connectTimeoutMs: 120000,
-		keepAliveIntervalMs: 10000,
-		maxRetries: 10,
+		retryRequestDelayMs: 250,
+		defaultQueryTimeoutMs: 60000,
+		connectTimeoutMs: 60000,
+		keepAliveIntervalMs: 25000,
+		maxRetries: 20,
 		GenerateHighQualityLinkPreview: false,
 		markOnlineOnConnect: false,
 		printQRInTerminal: false,
 		transactionOpts: {
 			maxCommitRetries: 10,
-			delayBetweenTriesMs: 10,
+			delayBetweenTriesMs: 250,
 		},
 		appStateMacVerification: {
 			patch: true,
@@ -532,42 +544,40 @@ async function startnimaBot() {
 			}, 3000);
 		}
 		if (connection === 'close') {
-			const reason = new Boom(lastDisconnect?.error)?.output.statusCode
-			if (reason === DisconnectReason.connectionLost) {
-				console.log('🔄 Server connection lost, reconnect...');
-				startnimaBot()
-			} else if (reason === DisconnectReason.connectionClosed) {
-				console.log('🔄 Connection closed, reconnect...');
-				startnimaBot()
-			} else if (reason === DisconnectReason.restartRequired) {
-				console.log('🔄 Restart required, reconnect...');
-				startnimaBot()
-			} else if (reason === DisconnectReason.timedOut) {
-				console.log('⏰ Connection timeout, reconnect...');
-				startnimaBot()
+			const reason = new Boom(lastDisconnect?.error)?.output.statusCode;
+			const errMsg = lastDisconnect?.error?.message || '';
+			_reconnectCount++;
+			// Exponential backoff: 5s → 10s → 20s → max 60s
+			const _backoff = Math.min(5000 * Math.pow(2, Math.min(_reconnectCount - 1, 3)), _MAX_RECONNECT_DELAY);
+			console.log(`🔌 Disconnect reason: ${reason} | attempt: ${_reconnectCount} | retry in ${_backoff/1000}s | ${errMsg}`);
+
+			if (reason === DisconnectReason.loggedOut) {
+				// loggedOut — session file clear කරලා reconnect (Railway volume reset handle)
+				console.log('🚪 Logged Out — session clear + reconnect...');
+				exec('find ./nimadev -name "*.json" -delete', () => {});
+				setTimeout(() => { _reconnectCount = 0; startnimaBot(); }, 5000);
 			} else if (reason === DisconnectReason.badSession) {
-				console.log('❌ Bad session (Bad MAC) — session keys clear කර reconnect...');
+				console.log('❌ Bad session — keys clear + reconnect...');
 				exec('find ./nimadev -name "*.json" ! -name "creds.json" -delete', () => {});
 				setTimeout(() => startnimaBot(), 3000);
-			} else if (reason === DisconnectReason.connectionReplaced) {
-				console.log('⚠️ Connection replaced — 30s කින් reconnect...');
-				setTimeout(() => startnimaBot(), 30000);
-			} else if (reason === DisconnectReason.loggedOut) {
-				console.log('🚪 Logged Out — session නොමකා 30s කින් reconnect කරමින්...');
-				// session DELETE නොකරනවා — reconnect try කරනවා
-				setTimeout(() => startnimaBot(), 30000);
 			} else if (reason === DisconnectReason.forbidden) {
-				console.log('❌ Forbidden — 60s කින් reconnect...');
+				console.log('❌ Forbidden — 60s...');
 				setTimeout(() => startnimaBot(), 60000);
+			} else if (reason === DisconnectReason.connectionReplaced) {
+				console.log('⚠️ Connection replaced — 45s...');
+				setTimeout(() => startnimaBot(), 45000);
 			} else if (reason === DisconnectReason.multideviceMismatch) {
-				console.log('⚠️ Multi-device mismatch — 30s කින් reconnect...');
-				setTimeout(() => startnimaBot(), 30000);
+				console.log('⚠️ Multi-device mismatch — session keys clear + reconnect...');
+				exec('find ./nimadev -name "*.json" ! -name "creds.json" -delete', () => {});
+				setTimeout(() => startnimaBot(), _backoff);
 			} else {
-				console.log(`⚠️ Unknown disconnect (${reason}) — 15s කින් reconnect...`);
-				setTimeout(() => startnimaBot(), 15000);
+				// connectionLost / connectionClosed / restartRequired / timedOut / unknown
+				// Exponential backoff reconnect
+				setTimeout(() => { if (_reconnectCount > 5) _reconnectCount = 0; startnimaBot(); }, _backoff);
 			}
 		}
 		if (connection == 'open') {
+			_reconnectCount = 0; // reconnect success — counter reset
 			console.log('✅ සාර්ථකව connected: ' + JSON.stringify(nimaBot.user, null, 2));
 			let botNumber = await nimaBot.decodeJid(nimaBot.user.id);
 			if (global.db?.set[botNumber] && !global.db?.set[botNumber]?.join) {
