@@ -1209,6 +1209,9 @@ async function doGitPull(childProcess) {
 }
 
 function startAutoGitPull(getChildProcess) {
+    // DISABLED — auto git pull off, bot off වෙන ගැටලුව නිරාකරණය
+    log.warn('🔄 Auto git pull DISABLED — GitHub check off කර ඇත');
+    return null;
     // git setup
     try { ensureGitSetup(); } catch { /* skip */ }
 

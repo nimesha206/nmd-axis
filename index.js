@@ -1,6 +1,7 @@
-// 🔄 Startup Git Pull Check (index.js direct start සඳහා)
+// 🔄 Startup Git Pull Check — DISABLED (auto git pull off)
 // ═══════════════════════════════════════════════════════════
-(async () => {
+// (async () => {
+(async () => { // wrapper kept for structure
     const { execSync } = require('child_process');
     const fs = require('fs');
     const path = require('path');
@@ -197,8 +198,8 @@
         } catch { return null; }
     }
 
-    // start.js හරහා run නම් skip (start.js දැනටමත් check කරලා ඇත)
-    const calledByStart = process.env._GIT_PULL_DONE === '1';
+    // Auto git pull DISABLED — startup/runtime checks off
+    const calledByStart = true; // always skip git pull
     if (!calledByStart) {
         console.log('\n🔄 [index.js] Startup git pull check...');
         try {
