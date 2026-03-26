@@ -3603,13 +3603,24 @@ module.exports = nimesha = async (nimesha, m, msg, store) => {
 							// H.265/HEVC → H.264 re-encode (WhatsApp black video fix)
 							let finalBuf = vBuf;
 							try {
-								const { execSync: _ffExec } = require('child_process');
+								const { execFile: _ffExecFile } = require('child_process');
 								const _os = require('os'); const _fs = require('fs');
 								const _tIn = _os.tmpdir() + '/tt_in_' + Date.now() + '.mp4';
 								const _tOut = _os.tmpdir() + '/tt_out_' + Date.now() + '.mp4';
 								_fs.writeFileSync(_tIn, vBuf);
-								_ffExec(`ffmpeg -y -i "${_tIn}" -c:v libx264 -preset fast -crf 28 -c:a aac -movflags +faststart "${_tOut}"`, { timeout: 120000, stdio: 'pipe' });
-								finalBuf = _fs.readFileSync(_tOut);
+								await new Promise((res, rej) => {
+									const _ffProc = _ffExecFile('ffmpeg', [
+										'-y', '-i', _tIn,
+										'-c:v', 'libx264', '-preset', 'fast', '-crf', '28',
+										'-c:a', 'aac', '-movflags', '+faststart',
+										_tOut
+									], { timeout: 90000 }, (err) => {
+										if (err) return rej(err);
+										res();
+									});
+								});
+								const _reOut = _fs.readFileSync(_tOut);
+								if (_reOut.length > 10000) finalBuf = _reOut;
 								try { _fs.unlinkSync(_tIn); _fs.unlinkSync(_tOut); } catch {}
 								console.log('[TT DL] ffmpeg re-encode OK, size:', finalBuf.length);
 							} catch(_ffErr) {
