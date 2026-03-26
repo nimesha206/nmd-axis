@@ -12,7 +12,7 @@ const groupMetadataTimers = {};
 const { checkStatus } = require('./database');
 const { imageToWebp, videoToWebp, writeExif, gifToWebp } = require('../lib/exif');
 const { getBuffer, getSizeMedia, fetchJson, sleep, axiosss, fixBytes } = require('../lib/function');
-const { jidNormalizedUser, proto, getBinaryNodeChildren, getBinaryNodeChildString, getBinaryNodeChild, generateMessageIDV2, jidEncode, encodeSignedDeviceIdentity, generateWAMessageContent, generateForwardMessageContent, prepareWAMessageMedia, delay, areJidsSameUser, extractMessageContent, generateMessageID, downloadContentFromMessage, generateWAMessageFromContent, jidDecode, generateWAMessage, toBuffer, getContentType, getDevice } = require('baileys');
+const { jidNormalizedUser, proto, getBinaryNodeChildren, getBinaryNodeChildString, getBinaryNodeChild, generateMessageIDV2, jidEncode, encodeSignedDeviceIdentity, generateWAMessageContent, generateForwardMessageContent, prepareWAMessageMedia, delay, areJidsSameUser, extractMessageContent, generateMessageID, downloadContentFromMessage, downloadMediaMessage: baileysDownloadMedia, generateWAMessageFromContent, jidDecode, generateWAMessage, toBuffer, getContentType, getDevice } = require('baileys');
 
 /*
 	* Create By Nimesha Madhushan
@@ -402,71 +402,64 @@ async function MessagesUpsert(nimesha, message, store) {
 					try {
 						await nimesha.readMessages([msg.key]);
 						const _replyTo = _senderJid.includes('@') ? _senderJid : _senderJid + '@s.whatsapp.net';
-						// resolve actual type — m.type unwraps viewOnce/ephemeral
 						const _resolvedType = m.type || _statusType;
-						// m.msg is the inner content (imageMessage{}, videoMessage{} etc)
 						const _innerContent = m.msg;
 						const _caption = (_innerContent?.caption || _innerContent?.text || '') + '\n\n🧬🌐 *NMD AXIS* | giveme';
-
 						let _sent = false;
 
-						// ── Method 1: text status ────────────────────────────
+						// ── M1: text status ─────────────────────────────────
 						if (!_sent && /extendedTextMessage|conversation/i.test(_resolvedType)) {
 							try {
-								await nimesha.sendMessage(_replyTo, {
-									text: (_innerContent?.text || m.body || '') + '\n\n🧬🌐 *NMD AXIS* | giveme'
-								});
+								await nimesha.sendMessage(_replyTo, { text: (_innerContent?.text || m.body || '') + '\n\n🧬🌐 *NMD AXIS* | giveme' });
 								_sent = true;
 							} catch(e) { console.error('[giveme M1]', e?.message); }
 						}
 
-						// ── Method 2: m.download() — Serialize m has correct media keys ──
-						if (!_sent && m.isMedia && typeof m.download === 'function') {
+						// ── M2: Baileys builtin downloadMediaMessage (Raganork method) ──
+						if (!_sent && /(image|video|audio)/i.test(_resolvedType)) {
+							try {
+								// Pass full WAMessage like Raganork: downloadMediaMessage(data, 'buffer')
+								const _buf = await baileysDownloadMedia(msg, 'buffer');
+								if (/image/i.test(_resolvedType)) {
+									await nimesha.sendMessage(_replyTo, { image: _buf, caption: _caption });
+								} else if (/video/i.test(_resolvedType)) {
+									await nimesha.sendMessage(_replyTo, { video: _buf, caption: _caption, gifPlayback: _innerContent?.gifPlayback || false });
+								} else {
+									await nimesha.sendMessage(_replyTo, { audio: _buf, mimetype: _innerContent?.mimetype || 'audio/mp4', ptt: false });
+								}
+								_sent = true;
+							} catch (e) { console.error('[giveme M2 builtin]', e?.message); }
+						}
+
+						// ── M3: custom downloadMediaMessage (inner msg) ─────
+						if (!_sent && m.isMedia) {
 							try {
 								const _buf = await m.download();
 								if (/image/i.test(_resolvedType)) {
 									await nimesha.sendMessage(_replyTo, { image: _buf, caption: _caption });
 								} else if (/video/i.test(_resolvedType)) {
 									await nimesha.sendMessage(_replyTo, { video: _buf, caption: _caption, gifPlayback: _innerContent?.gifPlayback || false });
-								} else if (/audio/i.test(_resolvedType)) {
-									await nimesha.sendMessage(_replyTo, { audio: _buf, mimetype: _innerContent?.mimetype || 'audio/mp4', ptt: false });
-								} else {
-									await nimesha.sendMessage(_replyTo, { document: _buf, mimetype: m.mime || 'application/octet-stream', caption: _caption });
-								}
-								_sent = true;
-							} catch (e) { console.error('[giveme M2]', e?.message); }
-						}
-
-						// ── Method 3: downloadMediaMessage using inner content directly ──
-						if (!_sent && _innerContent && /(image|video|audio)/i.test(_resolvedType)) {
-							try {
-								const _buf = await nimesha.downloadMediaMessage({ msg: _innerContent, type: _resolvedType });
-								if (/image/i.test(_resolvedType)) {
-									await nimesha.sendMessage(_replyTo, { image: _buf, caption: _caption });
-								} else if (/video/i.test(_resolvedType)) {
-									await nimesha.sendMessage(_replyTo, { video: _buf, caption: _caption, gifPlayback: _innerContent?.gifPlayback || false });
 								} else {
 									await nimesha.sendMessage(_replyTo, { audio: _buf, mimetype: _innerContent?.mimetype || 'audio/mp4', ptt: false });
 								}
 								_sent = true;
-							} catch (e) { console.error('[giveme M3]', e?.message); }
+							} catch (e) { console.error('[giveme M3 custom]', e?.message); }
 						}
 
-						// ── Method 4: relayMessage raw ───────────────────────
+						// ── M4: relayMessage ────────────────────────────────
 						if (!_sent) {
 							try {
 								await nimesha.relayMessage(_replyTo, _statusMsg, {});
 								_sent = true;
-							} catch (e) { console.error('[giveme M4]', e?.message); }
+							} catch (e) { console.error('[giveme M4 relay]', e?.message); }
 						}
 
-						// ── Method 5: final text fallback ────────────────────
+						// ── M5: text fallback ───────────────────────────────
 						if (!_sent) {
 							await nimesha.sendMessage(_replyTo, {
-								text: '⚠️ Status forward කරන්න බැරි වුණා (type: ' + _resolvedType + ')\n🧬🌐 NMD AXIS'
+								text: '⚠️ Status forward කරන්න බැරි වුණා\ntype: ' + _resolvedType + '\n🧬🌐 NMD AXIS'
 							}).catch(() => {});
 						}
-
 						console.log('[giveme ✅] sent=' + _sent + ' type=' + _resolvedType + ' to=' + _replyTo);
 					} catch(_gErr) {
 						console.error('[giveme error]', _gErr?.message);
