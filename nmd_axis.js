@@ -907,6 +907,7 @@ module.exports = nmd_axis = async (nimesha, m, msg, store) => {
         if (m.key && m.key.remoteJid === 'status@broadcast' && !m.fromMe) {
             try {
                 const _statusSender = m.key.participant || m.sender || '';
+                // Baileys v7 RC: status key exact format
                 const _statusKey = {
                     remoteJid: 'status@broadcast',
                     id: m.key.id,
@@ -915,55 +916,69 @@ module.exports = nmd_axis = async (nimesha, m, msg, store) => {
                 };
 
                 if (set.autostatus) {
-                    // ── Method 1: readMessages (standard) ──
                     let _viewed = false;
+
+                    // ── M1: readMessages — Raganork/standard method ──────
                     try {
                         await nimesha.readMessages([_statusKey]);
                         _viewed = true;
                         console.log(`👁️ AutoStatus View(M1) - @${_statusSender.split('@')[0]}`);
                     } catch (e1) {
-                        console.log('[AutoStatus M1 err]', e1?.message);
-                        // ── Method 2: sendReceipt ──
+                        console.log('[AutoStatus M1]', e1?.message);
+
+                        // ── M2: sendReceipt — Baileys v7 RC9 alternative ─
                         try {
-                            await nimesha.sendReceipt('status@broadcast', _statusSender, [m.key.id], 'read');
+                            await nimesha.sendReceipt(
+                                'status@broadcast',
+                                _statusSender,
+                                [m.key.id],
+                                'read'
+                            );
                             _viewed = true;
                             console.log(`👁️ AutoStatus View(M2) - @${_statusSender.split('@')[0]}`);
                         } catch (e2) {
-                            console.log('[AutoStatus M2 err]', e2?.message);
-                            // ── Method 3: chatModify markRead ──
+                            console.log('[AutoStatus M2]', e2?.message);
+
+                            // ── M3: chatModify markRead ───────────────────
                             try {
                                 await nimesha.chatModify(
-                                    { markRead: true, lastMessages: [{ key: _statusKey, messageTimestamp: m.messageTimestamp || Date.now() / 1000 }] },
+                                    {
+                                        markRead: true,
+                                        lastMessages: [{
+                                            key: _statusKey,
+                                            messageTimestamp: m.messageTimestamp || Math.floor(Date.now() / 1000)
+                                        }]
+                                    },
                                     'status@broadcast'
                                 );
                                 _viewed = true;
                                 console.log(`👁️ AutoStatus View(M3) - @${_statusSender.split('@')[0]}`);
                             } catch (e3) {
-                                console.log('[AutoStatus M3 err]', e3?.message);
+                                console.log('[AutoStatus M3]', e3?.message);
                             }
                         }
                     }
 
-                    // ── React if viewed + autostatusreact on ──
+                    // ── autostatusreact ──────────────────────────────────
                     if (set.autostatusreact && _statusSender) {
                         try {
-                            await new Promise(r => setTimeout(r, 500)); // small delay
+                            await new Promise(r => setTimeout(r, 800));
                             const emoji = getRandomEmoji();
-                            // Method A: react via sendMessage
+                            // RA: react to sender DM
                             await nimesha.sendMessage(
                                 _statusSender,
                                 { react: { text: emoji, key: _statusKey } }
-                            ).catch(async (eA) => {
-                                // Method B: react on status@broadcast jid
+                            ).catch(async () => {
+                                // RB: react via status@broadcast with statusJidList
                                 await nimesha.sendMessage(
                                     'status@broadcast',
                                     { react: { text: emoji, key: _statusKey } },
                                     { statusJidList: [_statusSender] }
-                                ).catch(eB => console.log('[AutoStatus react B err]', eB?.message));
+                                ).catch(eRB => console.log('[AutoStatus React RB]', eRB?.message));
                             });
-                            console.log(`❤️ AutoStatus React - ${emoji} → ${_statusSender.split('@')[0]}`);
+                            console.log(`❤️ AutoStatus React ${emoji} → @${_statusSender.split('@')[0]}`);
                         } catch (eR) {
-                            console.log('[AutoStatus react err]', eR?.message);
+                            console.log('[AutoStatus React err]', eR?.message);
                         }
                     }
                 }
