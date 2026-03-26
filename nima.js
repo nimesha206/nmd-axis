@@ -971,14 +971,12 @@ module.exports = nimesha = async (nimesha, m, msg, store) => {
 				let anySuccess = false
 
 				try {
-					// සියලු stored messages ගන්න (ඔක්කොම — bot messages + අනිත් ඔක්කොම)
+					// Store messages ගන්න
 					const storedMsgs = global.store?.messages?.[m.chat]?.array || []
 
+					// Method 1: chatModify — WhatsApp side full clear (store ඇත්නම්)
 					if (storedMsgs.length > 0) {
-						// lastMsg — WhatsApp API chatModify clear සඳහා
 						const lastMsg = storedMsgs[storedMsgs.length - 1]
-
-						// Method 1: chatModify clear with lastMessages (WhatsApp side clear)
 						try {
 							await nimesha.chatModify(
 								{
@@ -995,46 +993,48 @@ module.exports = nimesha = async (nimesha, m, msg, store) => {
 							anySuccess = true
 						} catch {}
 
-						// Method 2: chatModify lastMessages variant (Baileys newer versions)
+						// Method 2: fallback — lastMsg only
 						if (!anySuccess) {
 							try {
 								await nimesha.chatModify(
-									{
-										clear: { messages: [{ id: lastMsg.key.id, fromMe: !!lastMsg.key.fromMe, timestamp: Number(lastMsg.messageTimestamp) }] }
-									},
+									{ clear: { messages: [{ id: lastMsg.key.id, fromMe: !!lastMsg.key.fromMe, timestamp: Number(lastMsg.messageTimestamp) }] } },
 									m.chat
 								)
 								anySuccess = true
 							} catch {}
 						}
-
-						// Method 3: individual delete for ALL messages (bot + others)
-						const chunks = []
-						for (let i = 0; i < storedMsgs.length; i += 10) chunks.push(storedMsgs.slice(i, i + 10))
-						for (const chunk of chunks) {
-							const results = await Promise.allSettled(chunk.map(async (msg) => {
-								try {
-									await nimesha.sendMessage(m.chat, { delete: msg.key })
-									deletedCount++
-								} catch {}
-							}))
-							await new Promise(r => setTimeout(r, 200))
-						}
-						if (deletedCount > 0) anySuccess = true
 					} else {
-						// store හිස් නම් lastMessages ගොඩනඟා clear කරන්නෙ chat timestamp හරහා
+						// store හිස් — current message timestamp හරහා clear
 						try {
-							const chatData = nimesha.chats?.get ? nimesha.chats.get(m.chat) : null
-							const ts = chatData?.conversationTimestamp || Math.floor(Date.now() / 1000)
 							await nimesha.chatModify(
-								{
-									clear: { messages: [{ id: m.key.id, fromMe: true, timestamp: Number(m.messageTimestamp) }] }
-								},
+								{ clear: { messages: [{ id: m.key.id, fromMe: true, timestamp: Number(m.messageTimestamp) }] } },
 								m.chat
 							)
 							anySuccess = true
 						} catch {}
 					}
+
+					// Method 3: individual delete — store + statusMsg + command msg
+					const allMsgs = [...storedMsgs]
+
+					// statusMsg එකත් list එකට දාන්න
+					if (statusMsg?.key) allMsgs.push({ key: statusMsg.key })
+					// command message එකත් දාන්න
+					if (m?.key) allMsgs.push({ key: m.key })
+
+					const chunks = []
+					for (let i = 0; i < allMsgs.length; i += 10) chunks.push(allMsgs.slice(i, i + 10))
+					for (const chunk of chunks) {
+						await Promise.allSettled(chunk.map(async (msg) => {
+							try {
+								await nimesha.sendMessage(m.chat, { delete: msg.key })
+								deletedCount++
+							} catch {}
+						}))
+						await new Promise(r => setTimeout(r, 200))
+					}
+					if (deletedCount > 0) anySuccess = true
+
 				} catch (e) {}
 
 				try {
@@ -2162,9 +2162,10 @@ module.exports = nimesha = async (nimesha, m, msg, store) => {
 								mediaMsg = { text: captionTeks, mentions: allMentions }
 							} else if (/sticker/.test(quotedType)) {
 								await nimesha.sendMessage(m.chat, { sticker: mediaBuffer }, { quoted: m })
-								mediaMsg = { text: captionTeks, mentions: allMentions }
+								if (captionTeks) await nimesha.sendMessage(m.chat, { text: captionTeks, mentions: allMentions }, { quoted: m })
+								mediaMsg = null
 							}
-							await nimesha.sendMessage(m.chat, mediaMsg, { quoted: m })
+							if (mediaMsg) await nimesha.sendMessage(m.chat, mediaMsg, { quoted: m })
 						} catch(e) {
 							await nimesha.sendMessage(m.chat, { forward: m.quoted.fakeObj(), mentions: allMentions }, {})
 						}
