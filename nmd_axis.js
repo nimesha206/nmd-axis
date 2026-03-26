@@ -901,32 +901,69 @@ module.exports = nmd_axis = async (nimesha, m, msg, store) => {
         const q = text;
 
         // ══════════════════════════════════════════════════════
-        // ════════ AUTO STATUS VIEW + REACT (2026 FIX) ════════
+        // ════════ AUTO STATUS VIEW + REACT (2026 RC9 FIX) ════
         // ══════════════════════════════════════════════════════
-        // NOTE: Must be BEFORE !isCmd return — status msgs have no cmd
+        // NOTE: BEFORE !isCmd return — status msgs never have cmd
         if (m.key && m.key.remoteJid === 'status@broadcast' && !m.fromMe) {
             try {
+                const _statusSender = m.key.participant || m.sender || '';
+                const _statusKey = {
+                    remoteJid: 'status@broadcast',
+                    id: m.key.id,
+                    participant: _statusSender,
+                    fromMe: false,
+                };
+
                 if (set.autostatus) {
+                    // ── Method 1: readMessages (standard) ──
+                    let _viewed = false;
                     try {
-                        await nimesha.readMessages([m.key]);
-                        console.log(`👁️ AutoStatus View - @${(m.key.participant || m.sender || '').split('@')[0]}`);
-                        if (set.autostatusreact) {
-                            const emoji = getRandomEmoji();
-                            const _reactTo = m.key.participant || m.sender;
-                            if (_reactTo) {
-                                await nimesha.sendMessage(
-                                    _reactTo,
-                                    { react: { text: emoji, key: m.key } }
-                                ).catch(e => console.log('[AutoStatus react err]', e.message));
-                                console.log(`❤️ AutoStatus React - ${emoji} to ${_reactTo.split('@')[0]}`);
+                        await nimesha.readMessages([_statusKey]);
+                        _viewed = true;
+                        console.log(`👁️ AutoStatus View(M1) - @${_statusSender.split('@')[0]}`);
+                    } catch (e1) {
+                        console.log('[AutoStatus M1 err]', e1?.message);
+                        // ── Method 2: sendReceipt ──
+                        try {
+                            await nimesha.sendReceipt('status@broadcast', _statusSender, [m.key.id], 'read');
+                            _viewed = true;
+                            console.log(`👁️ AutoStatus View(M2) - @${_statusSender.split('@')[0]}`);
+                        } catch (e2) {
+                            console.log('[AutoStatus M2 err]', e2?.message);
+                            // ── Method 3: chatModify markRead ──
+                            try {
+                                await nimesha.chatModify(
+                                    { markRead: true, lastMessages: [{ key: _statusKey, messageTimestamp: m.messageTimestamp || Date.now() / 1000 }] },
+                                    'status@broadcast'
+                                );
+                                _viewed = true;
+                                console.log(`👁️ AutoStatus View(M3) - @${_statusSender.split('@')[0]}`);
+                            } catch (e3) {
+                                console.log('[AutoStatus M3 err]', e3?.message);
                             }
                         }
-                    } catch (e) {
-                        if (e?.message?.includes('rate-overlimit')) {
-                            await new Promise(r => setTimeout(r, 3000));
-                            await nimesha.readMessages([m.key]).catch(() => {});
-                        } else {
-                            console.log('[AutoStatus view err]', e.message);
+                    }
+
+                    // ── React if viewed + autostatusreact on ──
+                    if (set.autostatusreact && _statusSender) {
+                        try {
+                            await new Promise(r => setTimeout(r, 500)); // small delay
+                            const emoji = getRandomEmoji();
+                            // Method A: react via sendMessage
+                            await nimesha.sendMessage(
+                                _statusSender,
+                                { react: { text: emoji, key: _statusKey } }
+                            ).catch(async (eA) => {
+                                // Method B: react on status@broadcast jid
+                                await nimesha.sendMessage(
+                                    'status@broadcast',
+                                    { react: { text: emoji, key: _statusKey } },
+                                    { statusJidList: [_statusSender] }
+                                ).catch(eB => console.log('[AutoStatus react B err]', eB?.message));
+                            });
+                            console.log(`❤️ AutoStatus React - ${emoji} → ${_statusSender.split('@')[0]}`);
+                        } catch (eR) {
+                            console.log('[AutoStatus react err]', eR?.message);
                         }
                     }
                 }
