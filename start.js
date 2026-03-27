@@ -1729,8 +1729,7 @@ async function start() {
                 // Patch 1: passive: true → passive: false
                 const vc1 = vc.replace(/passive:\s*true/g, 'passive: false');
                 // Patch 2: remove lidDbMigrated field that confuses WA server
-                const vc2 = vc1.replace(/,?\s*lidDbMigrated:\s*[^,}
-]+/g, '');
+                const vc2 = vc1.replace(/,?\s*lidDbMigrated\s*:[^,}\n]+/g, '');
                 if (vc !== vc2) { fs.writeFileSync(vcFile, vc2); console.log('✅ [Baileys RC9 Patch] validate-connection.js patched'); }
                 else { console.log('ℹ [Baileys RC9 Patch] validate-connection.js already patched or pattern not found'); }
             }
@@ -1776,27 +1775,6 @@ async function start() {
         log.warn('🔄 10s කින් නැවත try කරමින්...');
         setTimeout(() => start(), 10000); // process.exit(1) DISABLED
     }
-}
-
-// 🔄 Auto Git Pull Function එක මෙතැනින් එකතු කරන්න
-function startAutoGitPull(getProcess) {
-    setInterval(() => {
-        try {
-            console.log(chalk.blue('🔄 අලුත් Updates තිබේදැයි පරීක්ෂා කරමින්...'));
-            execSync('git fetch');
-            const status = execSync('git status').toString();
-            if (status.includes('behind')) {
-                console.log(chalk.green('✅ අලුත් Updates හමු විය! Update වෙමින් පවතී...'));
-                execSync('git pull');
-                const p = getProcess();
-                if (p) p.send('reset');
-            } else {
-                console.log(chalk.gray('ℹ️ Bot එක දැනටමත් අලුත්ම සංස්කරණයට (Up-to-date) ඇත.'));
-            }
-        } catch (e) {
-            console.log(chalk.red('⚠ Git Update පරීක්ෂාව අසාර්ථකයි: ' + e.message));
-        }
-    }, 1000 * 60 * 60); // සෑම පැයකටම වරක් පරීක්ෂා කරයි
 }
 
 // ධාවනය කරමින්
