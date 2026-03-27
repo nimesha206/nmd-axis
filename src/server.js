@@ -1318,15 +1318,28 @@ app.get('/api/pair', async (req, res) => {
 		global.pairSessions[cleanNumber] = { sock, code: null };
 		sock.ev.on('creds.update', saveCreds);
 		sock.ev.on('connection.update', async (update) => {
-			const { connection, lastDisconnect } = update;
-			if (connection === 'connecting' && !sock.authState.creds.registered) {
-				setTimeout(async () => {
+			const { connection, lastDisconnect, qr } = update;
+			// Fix: QR event හෝ connecting event දෙකෙදිම pair code request කරනවා
+			// Railway cloud environment හිදී connection slow නිසා retry logic add කළා
+			if ((connection === 'connecting' || !!qr) && !sock.authState.creds.registered && !global.pairSessions[cleanNumber]?.code) {
+				const requestCodeWithRetry = async (attempt = 1) => {
 					try {
 						const code = await sock.requestPairingCode(cleanNumber);
 						const fmt = code?.match(/.{1,4}/g)?.join('-') || code;
-						if (global.pairSessions[cleanNumber]) global.pairSessions[cleanNumber].code = fmt;
-					} catch(e) { console.log('[pair]', e.message); }
-				}, 3000);
+						if (global.pairSessions[cleanNumber]) {
+							global.pairSessions[cleanNumber].code = fmt;
+							console.log(`✅ Pair code generated: ${fmt} (attempt ${attempt})`);
+						}
+					} catch(e) {
+						console.log(`[pair attempt ${attempt}] ${e.message}`);
+						// Retry up to 5 times with increasing delays
+						if (attempt < 5 && global.pairSessions[cleanNumber] && !global.pairSessions[cleanNumber].code) {
+							setTimeout(() => requestCodeWithRetry(attempt + 1), attempt * 2000);
+						}
+					}
+				};
+				// Initial delay: 3s first try, then retry with backoff
+				setTimeout(() => requestCodeWithRetry(1), 3000);
 			}
 			if (connection === 'open') {
 				global.botSessions[cleanNumber] = sock;
@@ -1353,11 +1366,12 @@ app.get('/api/pair', async (req, res) => {
 			}
 		});
 		let waited = 0;
-		while (!global.pairSessions[cleanNumber]?.code && waited < 15000) {
+		// Fix: 15s → 30s increased for Railway cloud slow start
+		while (!global.pairSessions[cleanNumber]?.code && waited < 30000) {
 			await new Promise(r => setTimeout(r, 500)); waited += 500;
 		}
 		const code = global.pairSessions[cleanNumber]?.code;
-		if (!code) return res.status(504).json({ status: false, message: 'Timeout. නැවත try කරන්න.' });
+		if (!code) return res.status(504).json({ status: false, message: 'Code ජනනය timeout. Railway server slow නිසා විය හැකිය. නැවත try කරන්න.' });
 		return res.json({ status: true, code, number: cleanNumber, message: 'WhatsApp > Linked Devices > Link with phone number' });
 	} catch(e) { return res.status(500).json({ status: false, message: e.message }); }
 });
