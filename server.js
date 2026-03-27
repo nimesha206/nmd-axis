@@ -37,7 +37,6 @@ async function generateMenuCards(botInfo = {}) {
             { id:'fun',      title:'විනෝදය (FUN)',           siTitle:'😂 විනෝදාත්මක',         color:'#cc0066', cmds:['.joke','.quote','.fact','.8ball','.compliment','.insult','.hack','.ship','.flirt','.shayari'] },
             { id:'games',    title:'ක්‍රීඩා (GAMES)',         siTitle:'🎮 ක්‍රීඩා විධාන',      color:'#006699', cmds:['.tictactoe','.suit','.chess','.akinator','.slot','.math','.blackjack'] },
             { id:'search',   title:'සෙවුම (SEARCH)',         siTitle:'🔍 සෙවුම් විධාන',       color:'#449900', cmds:['.google','.ytsearch','.define','.weather','.news','.lyrics','.fact'] },
-            { id:'privacy',  title:'PRIVACY',                siTitle:'🔐 Privacy Manager',     color:'#ff6600', cmds:['.privacy 1-3','.privacy 4-5','.privacy 6-8','.privacy 9-11','.privacy 12-13','.privacy 14-16','.privacy 17-20','.privacy 21'] },
         ];
 
         function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -724,6 +723,230 @@ app.get('/pair', async (req, res) => {
 	}
 });
 
+// ══════════════════════════════════════════════════════════════════════════════
+// 🌐 NMD-AXIS WEB PANEL API — Netlify Panel Integration
+// ══════════════════════════════════════════════════════════════════════════════
+
+// CORS middleware — Netlify panel access සඳහා
+app.use((req, res, next) => {
+	res.setHeader('Access-Control-Allow-Origin', '*');
+	res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+	res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-panel-key');
+	if (req.method === 'OPTIONS') return res.sendStatus(200);
+	next();
+});
+
+// Panel auth disabled — open access
+const panelAuth = (req, res, next) => next();
+
+// ── Bot Status ────────────────────────────────────────────────────────────────
+app.get('/api/status', panelAuth, (req, res) => {
+	const nima = global.nimaInstance;
+	const connected = !!(nima && nima.authState?.creds?.registered);
+	const botNumber = connected ? nima.decodeJid(nima.user.id).replace('@s.whatsapp.net', '') : null;
+	const botName = connected ? (nima.user?.name || global.botname || 'NMD AXIS') : null;
+
+	const uptime = process.uptime();
+	const h = Math.floor(uptime / 3600);
+	const m = Math.floor((uptime % 3600) / 60);
+	const s = Math.floor(uptime % 60);
+
+	// Bot settings read
+	let settings = {};
+	if (connected && global.db?.set?.[nima.decodeJid(nima.user.id)]) {
+		const set = global.db.set[nima.decodeJid(nima.user.id)];
+		settings = {
+			mode: set.public ? 'public' : 'self',
+			anticall: !!set.anticall,
+			antidelete: !!set.antidelete,
+			autostatus: !!set.autostatus,
+			autostatusreact: !!set.autostatusreact,
+			autorecording: !!set.autorecording,
+			autobio: !!set.autobio,
+			autoread: !!set.autoread,
+			autotyping: !!set.autotyping,
+			readsw: !!set.readsw,
+			multiprefix: !!set.multiprefix,
+			antispam: !!set.antispam,
+			antilink: !!set.antilink,
+			antivirtex: !!set.antivirtex,
+			antihidetag: !!set.antihidetag,
+			antitagsw: !!set.antitagsw,
+			welcome: !!set.welcome,
+			leave: !!set.leave,
+			promote: !!set.promote,
+			demote: !!set.demote,
+			nsfw: !!set.nsfw,
+			grouponly: !!set.grouponly,
+			privateonly: !!set.privateonly,
+			didyoumean: !!set.didyoumean,
+			autobackup: !!set.autobackup,
+		};
+	}
+
+	res.json({
+		status: true,
+		connected,
+		botNumber,
+		botName,
+		ownerName: global.ownerName || global.author || 'Nimesha Madhushan',
+		uptime: `${h}h ${m}m ${s}s`,
+		uptimeSeconds: Math.floor(uptime),
+		version: (() => { try { return require('../package.json').version; } catch { return '2.0.0'; } })(),
+		settings,
+		readyForPair: !connected,
+	});
+});
+
+// ── Get All Settings ──────────────────────────────────────────────────────────
+app.get('/api/settings', panelAuth, (req, res) => {
+	const nima = global.nimaInstance;
+	if (!nima || !nima.authState?.creds?.registered) {
+		return res.status(503).json({ status: false, message: 'Bot connect වී නොමැත.' });
+	}
+	const botJid = nima.decodeJid(nima.user.id);
+	const set = global.db?.set?.[botJid] || {};
+
+	res.json({
+		status: true,
+		botNumber: botJid.replace('@s.whatsapp.net', ''),
+		settings: {
+			mode: set.public ? 'public' : 'self',
+			anticall: !!set.anticall,
+			antidelete: !!set.antidelete,
+			autostatus: !!set.autostatus,
+			autostatusreact: !!set.autostatusreact,
+			autorecording: !!set.autorecording,
+			autobio: !!set.autobio,
+			autoread: !!set.autoread,
+			autotyping: !!set.autotyping,
+			readsw: !!set.readsw,
+			multiprefix: !!set.multiprefix,
+			antispam: !!set.antispam,
+			antilink: !!set.antilink,
+			antivirtex: !!set.antivirtex,
+			antihidetag: !!set.antihidetag,
+			antitagsw: !!set.antitagsw,
+			welcome: !!set.welcome,
+			leave: !!set.leave,
+			promote: !!set.promote,
+			demote: !!set.demote,
+			nsfw: !!set.nsfw,
+			grouponly: !!set.grouponly,
+			privateonly: !!set.privateonly,
+			didyoumean: !!set.didyoumean,
+			autobackup: !!set.autobackup,
+		}
+	});
+});
+
+// ── Toggle / Update Setting ───────────────────────────────────────────────────
+app.post('/api/toggle', panelAuth, async (req, res) => {
+	const nima = global.nimaInstance;
+	if (!nima || !nima.authState?.creds?.registered) {
+		return res.status(503).json({ status: false, message: 'Bot connect වී නොමැත.' });
+	}
+
+	const { feature, value } = req.body;
+	const botJid = nima.decodeJid(nima.user.id);
+	if (!global.db.set[botJid]) global.db.set[botJid] = {};
+	const set = global.db.set[botJid];
+
+	const boolFeatures = [
+		'anticall', 'antidelete', 'autostatus', 'autostatusreact', 'autorecording',
+		'autobio', 'autoread', 'autotyping', 'readsw', 'multiprefix', 'antispam',
+		'antilink', 'antivirtex', 'antihidetag', 'antitagsw', 'welcome', 'leave',
+		'promote', 'demote', 'nsfw', 'grouponly', 'privateonly', 'didyoumean', 'autobackup'
+	];
+
+	if (feature === 'mode') {
+		// mode: 'public' or 'self'
+		if (value === 'public') {
+			set.public = true;
+			nima.public = true;
+			set.grouponly = false;
+			set.privateonly = false;
+		} else {
+			set.public = false;
+			nima.public = false;
+		}
+		if (global.db) await require('../src/database').dataBase && null; // write triggers on interval
+		res.json({ status: true, feature: 'mode', value: set.public ? 'public' : 'self' });
+	} else if (boolFeatures.includes(feature)) {
+		const newVal = typeof value === 'boolean' ? value : !set[feature];
+		set[feature] = newVal;
+		res.json({ status: true, feature, value: newVal });
+	} else {
+		res.status(400).json({ status: false, message: `'${feature}' feature හඳුනාගත නොහැකි විය.` });
+	}
+});
+
+// ── Bot Info (public — no auth needed) ───────────────────────────────────────
+app.get('/api/info', (req, res) => {
+	const nima = global.nimaInstance;
+	const connected = !!(nima && nima.authState?.creds?.registered);
+	res.json({
+		status: true,
+		connected,
+		botName: global.botname || 'NMD AXIS',
+		version: (() => { try { return require('../package.json').version; } catch { return '2.0.0'; } })(),
+	});
+});
+
+// ── Pair Code (enhanced — supports re-pair) ───────────────────────────────────
+// (original /pair endpoint still intact above — this is alias with better error)
+app.get('/api/pair', async (req, res) => {
+	const { number } = req.query;
+	if (!number) return res.status(400).json({ status: false, message: 'number query param අවශ්‍යයි. ?number=94xxxxxxxxx' });
+
+	const nima = global.nimaInstance;
+	if (!nima) return res.status(503).json({ status: false, message: 'Bot server start වෙමින් පවතී. තත්පර 10කින් නැවත උත්සාහ කරන්න.' });
+
+	if (nima.authState?.creds?.registered) {
+		return res.status(200).json({ status: false, alreadyConnected: true, message: 'Bot දැනටමත් connected. Disconnect කර නැවත pair කරන්න.' });
+	}
+
+	try {
+		const cleanNumber = number.replace(/[^0-9]/g, '');
+		if (cleanNumber.length < 7) return res.status(400).json({ status: false, message: 'අංකය වලංගු නොවේ. Country code සමඟ ඇතුළත් කරන්න. (Ex: 94xxxxxxxxx)' });
+
+		// Update global number_bot so bot uses this number
+		global.number_bot = cleanNumber;
+
+		const code = await nima.requestPairingCode(cleanNumber);
+		const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
+		return res.json({
+			status: true,
+			message: 'Pair code ලැබුණා!',
+			instructions: 'WhatsApp > Linked Devices > Link with phone number > Code ඇතුළත් කරන්න',
+			number: cleanNumber,
+			code: formatted,
+			expires: '60 seconds'
+		});
+	} catch (e) {
+		return res.status(500).json({ status: false, message: 'Pair code generate කිරීම අසාර්ථකයි.', error: e.message });
+	}
+});
+
+// ── Bot Connection Status (SSE — real-time) ───────────────────────────────────
+app.get('/api/events', panelAuth, (req, res) => {
+	res.setHeader('Content-Type', 'text/event-stream');
+	res.setHeader('Cache-Control', 'no-cache');
+	res.setHeader('Connection', 'keep-alive');
+	res.flushHeaders();
+
+	const send = () => {
+		const nima = global.nimaInstance;
+		const connected = !!(nima && nima.authState?.creds?.registered);
+		const data = JSON.stringify({ connected, ts: Date.now() });
+		res.write(`data: ${data}\n\n`);
+	};
+
+	send();
+	const interval = setInterval(send, 5000);
+	req.on('close', () => clearInterval(interval));
+});
+
 module.exports = { app, server, PORT };// Generate menu card images on startup
 async function generateMenuCards(botInfo = {}) {
     try {
@@ -753,12 +976,8 @@ async function generateMenuCards(botInfo = {}) {
             '#00aaff', // sky blue
             '#ff44aa', // hot pink
             '#44ff88', // mint
-            '#ff3366', // crimson
-            '#33ffcc', // aqua
-            '#ffcc00', // gold
-            '#aa44ff', // violet
         ];
-        // Fisher-Yates shuffle — enough for 9 cards
+        // Fisher-Yates shuffle
         const shuffled = [...PALETTE].sort(() => Math.random() - 0.5);
 
         const CATS = [
@@ -770,7 +989,6 @@ async function generateMenuCards(botInfo = {}) {
             { id:'fun',      title:'FUN',       sub:'Fun & Entertainment',     color: shuffled[5], cmds:['.joke','.quote','.fact','.8ball','.compliment','.insult','.hack','.ship','.flirt','.shayari'] },
             { id:'games',    title:'GAMES',     sub:'Games Commands',          color: shuffled[6], cmds:['.tictactoe','.suit','.chess','.akinator','.slot','.math','.blackjack'] },
             { id:'search',   title:'SEARCH',    sub:'Search Commands',         color: shuffled[7], cmds:['.google','.ytsearch','.define','.weather','.news','.lyrics','.fact'] },
-            { id:'privacy',  title:'PRIVACY',   sub:'Privacy Manager',          color: shuffled[8], cmds:['.privacy 1-3','.privacy 4-5','.privacy 6-8','.privacy 9-11','.privacy 12-13','.privacy 14-16','.privacy 17-20','.privacy 21'] },
         ];
 
         function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -1506,5 +1724,3 @@ app.get('/pair', async (req, res) => {
 		return res.status(500).json({ status: false, message: 'Pair code ගැනීමට අසමත් විය.', error: e.message });
 	}
 });
-
-module.exports = { app, server, PORT };
