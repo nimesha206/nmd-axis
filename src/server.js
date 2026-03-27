@@ -667,18 +667,7 @@ app.get('/dashboard', (req, res) => {
 
 // ── API Routes ─────────────────────────────────────────────────────────────────
 app.all('/', (req, res) => {
-	if (process.send) {
-		process.send('uptime');
-		process.once('message', (uptime) => {
-			res.json({
-				bot_name: packageInfo.name,
-				version: packageInfo.version,
-				author: packageInfo.author,
-				description: packageInfo.description,
-				uptime: `${Math.floor(uptime)} තත්පර`
-			});
-		});
-	} else res.json({ error: 'ක්‍රියාවලිය (Process) IPC සමඟ ධාවනය නොවේ' });
+	res.redirect('/dashboard');
 });
 
 app.all('/process', (req, res) => {
