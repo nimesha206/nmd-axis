@@ -28,11 +28,11 @@
   "dependencies": {
     "@distube/ytdl-core": "^4.16.12",
     "@hapi/boom": "^10.0.0",
-    "@whiskeysockets/baileys": "latest",
+    "@whiskeysockets/baileys": "6.7.9",
     "aki-api": "npm:@aqul/akinator-api@1.0.1",
     "awesome-phonenumber": "^4.4.0",
     "axios": "^1.13.6",
-    "baileys": "^7.0.0-rc.9",
+    "baileys": "6.7.9",
     "chalk": "^4.1.2",
     "cheerio": "^1.2.0",
     "chess.js": "^1.2.0",
