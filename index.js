@@ -275,8 +275,8 @@ const NodeCache = require('node-cache');
 const qrcode = require('qrcode-terminal');
 const { exec } = require('child_process');
 const { parsePhoneNumber } = require('awesome-phonenumber');
-const { default: makeWASocket, useMultiFileAuthState, Browsers, DisconnectReason, makeCacheableSignalKeyStore, fetchLatestWaWebVersion, jidNormalizedUser } = await import('baileys');
-const WAConnection = makeWASocket;
+// baileys import moved inside startnimaBot to avoid top-level await scope issues
+let makeWASocket, useMultiFileAuthState, Browsers, DisconnectReason, makeCacheableSignalKeyStore, fetchLatestWaWebVersion, jidNormalizedUser;
 
 const { dataBase } = require('./src/database');
 const { app, server, PORT } = require('./src/server');
@@ -434,6 +434,19 @@ async function startnimaBot() {
 		return
 	}
 	
+	// Baileys import inside function to fix WAConnection scope issue
+	if (!makeWASocket) {
+		const baileys = await import('baileys');
+		makeWASocket = baileys.default;
+		useMultiFileAuthState = baileys.useMultiFileAuthState;
+		Browsers = baileys.Browsers;
+		DisconnectReason = baileys.DisconnectReason;
+		makeCacheableSignalKeyStore = baileys.makeCacheableSignalKeyStore;
+		fetchLatestWaWebVersion = baileys.fetchLatestWaWebVersion;
+		jidNormalizedUser = baileys.jidNormalizedUser;
+	}
+	const WAConnection = makeWASocket;
+
 	const level = pino({ level: 'silent' });
 	const { version } = await fetchLatestWaWebVersion();
 	const { state, saveCreds } = await useMultiFileAuthState('nimadev');
