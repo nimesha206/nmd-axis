@@ -1392,4 +1392,18 @@ app.get('/api/stream', (req, res) => {
 	req.on('close', () => clearInterval(interval));
 });
 
+// Start listening immediately - don't rely on index.js
+if (!server.listening) {
+	server.listen(PORT, '0.0.0.0', () => {
+		console.log(`🌐 NMD AXIS Web Panel running on port ${PORT}`);
+	});
+	server.on('error', (err) => {
+		if (err.code === 'EADDRINUSE') {
+			console.log(`⚠️ Port ${PORT} already in use`);
+		} else {
+			console.error('Server error:', err);
+		}
+	});
+}
+
 module.exports = { app, server, PORT };
