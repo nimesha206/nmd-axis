@@ -434,10 +434,10 @@ async function startnimaBot() {
 		return
 	}
 	
-	// Baileys import inside function to fix WAConnection scope issue
+	// Baileys import — CommonJS compatible
 	if (!makeWASocket) {
-		const baileys = await import('baileys');
-		makeWASocket = baileys.default;
+		const baileys = require('baileys');
+		makeWASocket = baileys.default || baileys.makeWASocket || baileys;
 		useMultiFileAuthState = baileys.useMultiFileAuthState;
 		Browsers = baileys.Browsers;
 		DisconnectReason = baileys.DisconnectReason;
