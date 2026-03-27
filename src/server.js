@@ -666,8 +666,128 @@ app.get('/dashboard', (req, res) => {
 });
 
 // ── API Routes ─────────────────────────────────────────────────────────────────
-app.all('/', (req, res) => {
-	res.redirect('/dashboard');
+app.get('/', (req, res) => {
+	res.send(`<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NMD AXIS · Connect</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#05080f;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+  .card{background:#0c1120;border:1px solid #1e293b;border-radius:16px;padding:2rem;width:100%;max-width:420px}
+  h1{color:#00ff88;font-size:1.4rem;text-align:center;margin-bottom:.3rem;letter-spacing:2px}
+  p.sub{text-align:center;color:#64748b;font-size:.8rem;margin-bottom:2rem}
+  label{display:block;color:#94a3b8;font-size:.75rem;margin-bottom:.4rem;letter-spacing:1px}
+  input{width:100%;background:#0f172a;border:1px solid #1e293b;color:#e2e8f0;padding:.75rem 1rem;border-radius:8px;font-size:1rem;outline:none;transition:border .2s}
+  input:focus{border-color:#00ff88}
+  button{width:100%;margin-top:1rem;padding:.8rem;background:#00ff88;color:#05080f;font-weight:700;font-size:1rem;border:none;border-radius:8px;cursor:pointer;letter-spacing:1px;transition:opacity .2s}
+  button:hover{opacity:.85}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .code-box{margin-top:1.5rem;background:#0f172a;border:2px dashed #00ff88;border-radius:12px;padding:1.5rem;text-align:center;display:none}
+  .code-box .code{font-size:2rem;font-weight:700;color:#00ff88;letter-spacing:.3rem;font-family:monospace}
+  .code-box .hint{margin-top:.8rem;color:#64748b;font-size:.78rem;line-height:1.6}
+  .steps{margin-top:.6rem;color:#94a3b8;font-size:.8rem;text-align:left;line-height:1.8}
+  .steps span{color:#00ff88}
+  .status{margin-top:1rem;text-align:center;font-size:.85rem;color:#64748b;min-height:1.2rem}
+  .status.error{color:#f87171}
+  .status.ok{color:#00ff88}
+  .connected-box{margin-top:1.5rem;background:#0f172a;border:2px solid #00ff88;border-radius:12px;padding:1.2rem;text-align:center;display:none}
+  .connected-box .big{font-size:2rem}
+  .connected-box p{color:#00ff88;font-weight:700;margin:.4rem 0 .2rem}
+  .connected-box small{color:#64748b;font-size:.78rem}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>⚡ NMD · AXIS</h1>
+  <p class="sub">WhatsApp Bot · Connect Panel</p>
+
+  <label>ඔබේ WhatsApp Number (Country Code සමඟ)</label>
+  <input type="tel" id="num" placeholder="94771234567" inputmode="numeric"/>
+  <button id="btn" onclick="getCode()">🔑 Pair Code ගන්න</button>
+  <div class="status" id="status"></div>
+
+  <div class="code-box" id="codeBox">
+    <div style="font-size:.75rem;color:#64748b;margin-bottom:.5rem;letter-spacing:1px">PAIR CODE</div>
+    <div class="code" id="codeVal"></div>
+    <div class="hint">
+      <div class="steps">
+        <span>1.</span> WhatsApp විවෘත කරන්න<br>
+        <span>2.</span> ⋮ &gt; Linked Devices &gt; Link a Device<br>
+        <span>3.</span> "Link with phone number" තෝරන්න<br>
+        <span>4.</span> ඉහත code එක ඇතුළත් කරන්න
+      </div>
+    </div>
+  </div>
+
+  <div class="connected-box" id="connBox">
+    <div class="big">✅</div>
+    <p>Bot Connected!</p>
+    <small id="connNum"></small>
+  </div>
+</div>
+
+<script>
+const BASE = window.location.origin;
+let pollTimer = null;
+
+async function getCode() {
+  const num = document.getElementById('num').value.trim().replace(/\\D/g,'');
+  if (num.length < 7) { setStatus('Country code සමඟ number ඇතුළත් කරන්න. උදා: 94771234567', 'error'); return; }
+
+  setStatus('Checking...', '');
+  // Check if already connected
+  const chk = await fetch(\`\${BASE}/api/session?number=\${num}\`).then(r=>r.json()).catch(()=>null);
+  if (chk?.connected) { showConnected(num); return; }
+
+  setStatus('Pair code ජනනය කරමින්...', '');
+  document.getElementById('btn').disabled = true;
+
+  const res = await fetch(\`\${BASE}/api/pair?number=\${num}\`).then(r=>r.json()).catch(()=>null);
+  if (!res) { setStatus('Server error. නැවත try කරන්න.', 'error'); document.getElementById('btn').disabled=false; return; }
+  if (res.alreadyConnected) { showConnected(num); return; }
+  if (!res.status) { setStatus(res.message||'Error', 'error'); document.getElementById('btn').disabled=false; return; }
+
+  showCode(res.code);
+  setStatus('Code WhatsApp හි ඇතුළත් කරන්න. Auto-detect කරමින්...', 'ok');
+  startPoll(num);
+}
+
+function showCode(code) {
+  document.getElementById('codeVal').textContent = code;
+  document.getElementById('codeBox').style.display = 'block';
+  document.getElementById('connBox').style.display = 'none';
+}
+
+function showConnected(num) {
+  document.getElementById('codeBox').style.display = 'none';
+  document.getElementById('connBox').style.display = 'block';
+  document.getElementById('connNum').textContent = '+' + num;
+  setStatus('', '');
+  document.getElementById('btn').disabled = false;
+  if (pollTimer) clearInterval(pollTimer);
+}
+
+function startPoll(num) {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    const r = await fetch(\`\${BASE}/api/session?number=\${num}\`).then(x=>x.json()).catch(()=>null);
+    if (r?.connected) { showConnected(num); }
+  }, 4000);
+  setTimeout(() => { if (pollTimer) { clearInterval(pollTimer); document.getElementById('btn').disabled=false; } }, 120000);
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status' + (type ? ' '+type : '');
+}
+</script>
+</body>
+</html>
+`);
 });
 
 app.all('/process', (req, res) => {
