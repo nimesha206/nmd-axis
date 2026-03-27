@@ -521,24 +521,29 @@ async function startnimaBot() {
 		const { qr, connection, lastDisconnect, isNewLogin, receivedPendingNotifications } = update;
 		if ((connection === 'connecting' || !!qr) && pairingCode && phoneNumber && !nimaBot.authState.creds.registered && !pairingStarted) {
 			pairingStarted = true;
-			const requestCode = async () => {
+			// Fix: Retry logic with exponential backoff for Railway cloud slow connections
+			const requestCode = async (attempt = 1) => {
 				if (nimaBot.authState.creds.registered) return;
 				try {
-					console.log('🔑 Pairing Code ලබා ගනිමින්...')
+					console.log(`🔑 Pairing Code ලබා ගනිමින්... (attempt ${attempt})`);
 					let code = await nimaBot.requestPairingCode(phoneNumber);
 					console.log(chalk.bgGreen.black(' ════════════════════════════ '));
 					console.log(chalk.blue('🔑 *Pairing Code:*'), chalk.bgWhite.black.bold(' ' + code + ' '));
 					console.log(chalk.yellow('⏰ _මිනිත්තු 2කින් නව code එකක් ලැබේ_'));
 					console.log(chalk.bgGreen.black(' ════════════════════════════ '));
 				} catch(e) {
-					console.log('⚠️ Pairing code error:', e.message);
+					console.log(`⚠️ Pairing code error (attempt ${attempt}):`, e.message);
+					// Retry up to 5 times with increasing delays
+					if (attempt < 5) {
+						setTimeout(() => requestCode(attempt + 1), attempt * 3000);
+					}
 				}
 			};
 			setTimeout(async () => {
-				await requestCode();
+				await requestCode(1);
 				const interval = setInterval(async () => {
 					if (nimaBot.authState.creds.registered) { clearInterval(interval); return; }
-					await requestCode();
+					await requestCode(1);
 				}, 115000);
 			}, 3000);
 		}
