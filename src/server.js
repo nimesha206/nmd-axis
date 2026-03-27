@@ -673,356 +673,284 @@ app.get('/', (req, res) => {
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>NMD AXIS · Bot Connect</title>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet"/>
+<title>NMD AXIS · Connect Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-
 :root{
-  --bg:#020509;
-  --surface:#060d14;
-  --border:#0e2a1a;
-  --accent:#00ff88;
-  --accent2:#00c4ff;
-  --glow:rgba(0,255,136,.18);
-  --muted:#3d5a47;
-  --text:#c8e6d4;
+  --bg:#000;--s1:#0a0a0a;--s2:#111;
+  --g:#00ff88;--b:#00c4ff;--p:#bf5fff;--r:#ff3c6e;--y:#ffe000;
+  --text:#d0ffe8;--muted:#3a6650;
 }
+html,body{width:100%;height:100%;overflow-x:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;}
 
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:'Rajdhani',sans-serif;
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:1.5rem;
-  overflow-x:hidden;
-}
+/* ── Snow canvas ── */
+#snow{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;}
 
-/* animated bg grid */
-body::before{
-  content:'';
-  position:fixed;inset:0;
-  background-image:
-    linear-gradient(rgba(0,255,136,.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,255,136,.04) 1px, transparent 1px);
-  background-size:40px 40px;
-  animation:gridMove 20s linear infinite;
-  pointer-events:none;
-  z-index:0;
-}
-@keyframes gridMove{from{transform:translateY(0)}to{transform:translateY(40px)}}
+/* ── Animated color lines ── */
+.line-wrap{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:hidden;}
+.cline{position:absolute;left:0;width:100%;height:1px;opacity:0;animation:lineFall 6s linear infinite;}
+.cline:nth-child(1){top:15%;background:linear-gradient(90deg,transparent,var(--g),transparent);animation-delay:0s;animation-duration:5s;}
+.cline:nth-child(2){top:32%;background:linear-gradient(90deg,transparent,var(--b),transparent);animation-delay:1.5s;animation-duration:7s;}
+.cline:nth-child(3){top:55%;background:linear-gradient(90deg,transparent,var(--p),transparent);animation-delay:3s;animation-duration:6s;}
+.cline:nth-child(4){top:72%;background:linear-gradient(90deg,transparent,var(--r),transparent);animation-delay:4.5s;animation-duration:8s;}
+.cline:nth-child(5){top:88%;background:linear-gradient(90deg,transparent,var(--y),transparent);animation-delay:2s;animation-duration:5.5s;}
+@keyframes lineFall{0%{opacity:0;transform:scaleX(0)}20%{opacity:0.6}50%{opacity:0.3}100%{opacity:0;transform:scaleX(1.2)}}
 
-/* glow orbs */
-body::after{
-  content:'';
-  position:fixed;
-  width:600px;height:600px;
-  background:radial-gradient(circle, rgba(0,255,136,.07) 0%, transparent 70%);
-  top:-100px;left:-100px;
-  pointer-events:none;
-  z-index:0;
-  animation:orbFloat 8s ease-in-out infinite;
-}
-@keyframes orbFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(80px,60px)}}
+/* ── Scan lines overlay ── */
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,0.015) 2px,rgba(0,255,136,0.015) 4px);pointer-events:none;z-index:2;}
 
-.wrap{
-  position:relative;z-index:1;
-  width:100%;max-width:440px;
-}
+/* ── Main wrap ── */
+.wrap{position:relative;z-index:10;max-width:480px;margin:0 auto;padding:1.5rem 1rem 4rem;}
 
-/* top logo area */
-.logo-area{
-  text-align:center;
-  margin-bottom:2rem;
-  animation:fadeDown .7s ease both;
-}
-@keyframes fadeDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+/* ── Header ── */
+.hdr{text-align:center;padding:2rem 0 1.5rem;animation:fadeD .8s ease both;}
+.logo-ring{width:80px;height:80px;border-radius:50%;border:2px solid var(--g);display:inline-flex;align-items:center;justify-content:center;font-size:2rem;box-shadow:0 0 30px rgba(0,255,136,.3),0 0 60px rgba(0,255,136,.1);animation:pulse 3s ease-in-out infinite;margin-bottom:1rem;}
+@keyframes pulse{0%,100%{box-shadow:0 0 30px rgba(0,255,136,.3)}50%{box-shadow:0 0 60px rgba(0,255,136,.6),0 0 120px rgba(0,255,136,.2)}}
+.logo-title{font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:900;letter-spacing:.2em;background:linear-gradient(135deg,var(--g),var(--b),var(--p));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.logo-sub{font-size:.65rem;letter-spacing:.3em;color:var(--muted);margin-top:.4rem;}
+.live-badge{display:inline-flex;align-items:center;gap:.4rem;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);border-radius:999px;padding:.25rem .8rem;font-size:.6rem;letter-spacing:.15em;color:var(--g);margin-top:.6rem;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--g);box-shadow:0 0 6px var(--g);animation:blink 1.2s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 
-.logo-icon{
-  width:68px;height:68px;
-  border-radius:50%;
-  border:2px solid var(--accent);
-  background:var(--surface);
-  display:inline-flex;align-items:center;justify-content:center;
-  font-size:1.8rem;
-  box-shadow:0 0 30px var(--glow), inset 0 0 20px rgba(0,255,136,.05);
-  margin-bottom:1rem;
-  animation:pulse 3s ease-in-out infinite;
-}
-@keyframes pulse{0%,100%{box-shadow:0 0 30px var(--glow)}50%{box-shadow:0 0 50px rgba(0,255,136,.35)}}
+/* ── Status bar ── */
+.status-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:1rem;animation:fadeU .6s .2s ease both;}
+.stat{background:var(--s1);border:1px solid #1a1a1a;border-radius:10px;padding:.8rem;text-align:center;}
+.stat-label{font-size:.55rem;letter-spacing:.15em;color:var(--muted);margin-bottom:.3rem;}
+.stat-val{font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:700;}
+.stat-val.g{color:var(--g);} .stat-val.b{color:var(--b);} .stat-val.p{color:var(--p);}
 
-.logo-title{
-  font-family:'Orbitron',sans-serif;
-  font-size:1.5rem;
-  font-weight:700;
-  color:var(--accent);
-  letter-spacing:.15em;
-}
-.logo-sub{
-  font-size:.75rem;
-  color:var(--muted);
-  letter-spacing:.2em;
-  margin-top:.3rem;
-}
+/* ── Card ── */
+.card{background:var(--s1);border:1px solid #1c1c1c;border-radius:16px;overflow:hidden;margin-bottom:1rem;animation:fadeU .6s ease both;}
+.card:nth-child(2){animation-delay:.1s;} .card:nth-child(3){animation-delay:.2s;} .card:nth-child(4){animation-delay:.3s;}
+.card-top{height:3px;background:linear-gradient(90deg,var(--g),var(--b));}
+.card-top.p{background:linear-gradient(90deg,var(--p),var(--r));}
+.card-top.y{background:linear-gradient(90deg,var(--y),var(--g));}
+.card-body{padding:1.4rem;}
+.card-title{font-size:.6rem;letter-spacing:.2em;color:var(--muted);margin-bottom:1.2rem;display:flex;align-items:center;gap:.6rem;}
+.card-title::after{content:'';flex:1;height:1px;background:#1c1c1c;}
 
-/* card */
-.card{
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:16px;
-  overflow:hidden;
-  box-shadow:0 0 60px rgba(0,0,0,.5), 0 0 0 1px rgba(0,255,136,.04);
-  animation:fadeUp .7s ease .1s both;
-}
-@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+/* ── Tabs ── */
+.tabs{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #1c1c1c;}
+.tab{padding:.75rem;text-align:center;font-family:'Orbitron',sans-serif;font-size:.6rem;letter-spacing:.12em;cursor:pointer;color:var(--muted);border:none;background:none;transition:all .2s;position:relative;}
+.tab.active{color:var(--g);}
+.tab.active::after{content:'';position:absolute;bottom:0;left:15%;right:15%;height:2px;background:var(--g);box-shadow:0 0 8px var(--g);border-radius:2px;}
 
-/* tab row */
-.tabs{
-  display:grid;grid-template-columns:1fr 1fr;
-  border-bottom:1px solid var(--border);
-}
-.tab{
-  padding:.85rem;
-  text-align:center;
-  font-family:'Orbitron',sans-serif;
-  font-size:.65rem;
-  letter-spacing:.15em;
-  cursor:pointer;
-  color:var(--muted);
-  transition:all .25s;
-  border:none;background:none;
-  position:relative;
-}
-.tab.active{color:var(--accent)}
-.tab.active::after{
-  content:'';
-  position:absolute;bottom:0;left:10%;right:10%;height:2px;
-  background:var(--accent);
-  box-shadow:0 0 8px var(--accent);
-  border-radius:2px;
-}
-.tab:not(.active):hover{color:var(--text)}
+/* ── Input ── */
+.inp-wrap{position:relative;margin-bottom:.8rem;}
+.inp-icon{position:absolute;left:.9rem;top:50%;transform:translateY(-50%);font-size:.9rem;color:var(--muted);pointer-events:none;}
+input[type=tel],input[type=text]{width:100%;background:#0a0a0a;border:1px solid #1c1c1c;color:var(--text);padding:.8rem 1rem .8rem 2.8rem;border-radius:8px;font-family:'Share Tech Mono',monospace;font-size:.9rem;outline:none;transition:border .2s,box-shadow .2s;}
+input:focus{border-color:var(--g);box-shadow:0 0 0 2px rgba(0,255,136,.15);}
+input::placeholder{color:var(--muted);}
 
-/* body */
-.card-body{padding:1.8rem}
+/* ── Buttons ── */
+.btn{width:100%;padding:.85rem;border:none;border-radius:8px;font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.15em;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.btn-g{background:linear-gradient(135deg,#00ff88,#00c4ff);color:#000;}
+.btn-g:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,255,136,.3);}
+.btn-b{background:linear-gradient(135deg,var(--b),var(--p));color:#000;margin-top:.5rem;}
+.btn-b:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,196,255,.3);}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;}
 
-/* step label */
-.field-label{
-  font-size:.65rem;
-  letter-spacing:.18em;
-  color:var(--muted);
-  margin-bottom:.5rem;
-  display:block;
-}
+/* ── Status msg ── */
+.status-msg{text-align:center;font-size:.75rem;min-height:1rem;margin:.6rem 0;color:var(--muted);}
+.status-msg.ok{color:var(--g);} .status-msg.err{color:var(--r);}
 
-/* input */
-.input-wrap{position:relative;margin-bottom:1rem}
-.input-wrap input{
-  width:100%;
-  background:#040b0f;
-  border:1px solid var(--border);
-  color:var(--text);
-  padding:.8rem 1rem .8rem 3rem;
-  border-radius:8px;
-  font-family:'Rajdhani',sans-serif;
-  font-size:1.05rem;
-  outline:none;
-  transition:border .2s,box-shadow .2s;
-}
-.input-wrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
-.input-wrap input::placeholder{color:var(--muted);font-size:.9rem}
-.input-icon{
-  position:absolute;left:.85rem;top:50%;transform:translateY(-50%);
-  color:var(--muted);font-size:1rem;pointer-events:none;
-}
+/* ── Code chip ── */
+.code-box{display:none;margin-top:1rem;background:#0a0a0a;border:1px dashed rgba(0,255,136,.3);border-radius:12px;padding:1.2rem;text-align:center;animation:fadeU .4s ease both;}
+.code-lbl{font-size:.55rem;letter-spacing:.2em;color:var(--muted);margin-bottom:.5rem;}
+.code-val{font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;color:var(--g);letter-spacing:.3em;text-shadow:0 0 20px rgba(0,255,136,.5);}
+.code-steps{margin-top:.8rem;font-size:.7rem;color:var(--muted);line-height:1.8;text-align:left;}
+.code-steps b{color:var(--g);}
 
-/* btn */
-.btn{
-  width:100%;
-  padding:.9rem;
-  background:linear-gradient(135deg,#00ff88,#00c4ff);
-  color:#020509;
-  font-family:'Orbitron',sans-serif;
-  font-size:.72rem;
-  font-weight:700;
-  letter-spacing:.18em;
-  border:none;border-radius:8px;
-  cursor:pointer;
-  position:relative;overflow:hidden;
-  transition:opacity .2s,transform .1s;
-}
-.btn:hover{opacity:.9}
-.btn:active{transform:scale(.98)}
-.btn:disabled{opacity:.35;cursor:not-allowed}
-.btn::before{
-  content:'';
-  position:absolute;inset:0;
-  background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.15));
-  pointer-events:none;
-}
+/* ── QR box ── */
+.qr-box{display:none;text-align:center;padding:1rem 0;}
+.qr-box img{border-radius:12px;max-width:220px;border:2px solid var(--g);}
+.qr-note{font-size:.65rem;color:var(--muted);margin-top:.6rem;}
 
-/* status */
-.status-line{
-  margin-top:.9rem;
-  text-align:center;
-  font-size:.8rem;
-  min-height:1.1rem;
-  color:var(--muted);
-  letter-spacing:.05em;
-}
-.status-line.ok{color:var(--accent)}
-.status-line.err{color:#f87171}
+/* ── Connected box ── */
+.conn-box{display:none;text-align:center;padding:.5rem 0;animation:fadeU .4s ease both;}
+.conn-tick{font-size:2.5rem;}
+.conn-title{font-family:'Orbitron',sans-serif;font-size:.85rem;color:var(--g);margin:.4rem 0 .2rem;}
+.conn-num{font-size:.75rem;color:var(--muted);}
 
-/* code reveal */
-.code-reveal{
-  margin-top:1.4rem;
-  background:#040b0f;
-  border:1px dashed rgba(0,255,136,.3);
-  border-radius:12px;
-  padding:1.4rem;
-  text-align:center;
-  display:none;
-  animation:fadeUp .4s ease both;
-}
-.code-label{font-size:.6rem;letter-spacing:.2em;color:var(--muted);margin-bottom:.6rem}
-.code-value{
-  font-family:'Orbitron',sans-serif;
-  font-size:2rem;
-  font-weight:700;
-  color:var(--accent);
-  letter-spacing:.3em;
-  text-shadow:0 0 20px rgba(0,255,136,.4);
-}
-.code-steps{
-  margin-top:1rem;
-  text-align:left;
-  font-size:.78rem;
-  color:#6b8f7a;
-  line-height:1.9;
-}
-.code-steps b{color:var(--accent)}
+/* ── Toggle settings ── */
+.toggle-list{display:flex;flex-direction:column;gap:.5rem;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:.6rem .8rem;background:#0a0a0a;border:1px solid #1c1c1c;border-radius:8px;transition:border-color .2s;}
+.toggle-row:hover{border-color:#2a2a2a;}
+.toggle-label{font-size:.72rem;letter-spacing:.05em;}
+.toggle-sub{font-size:.55rem;color:var(--muted);margin-top:.1rem;}
+.toggle-sw{position:relative;width:38px;height:20px;flex-shrink:0;}
+.toggle-sw input{opacity:0;width:0;height:0;}
+.slider{position:absolute;inset:0;background:#1c1c1c;border-radius:10px;cursor:pointer;transition:.3s;}
+.slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;bottom:3px;background:#555;border-radius:50%;transition:.3s;}
+input:checked+.slider{background:rgba(0,255,136,.25);border:1px solid var(--g);}
+input:checked+.slider:before{transform:translateX(18px);background:var(--g);box-shadow:0 0 6px var(--g);}
 
-/* connected */
-.connected{
-  margin-top:1.4rem;
-  background:rgba(0,255,136,.06);
-  border:1px solid rgba(0,255,136,.2);
-  border-radius:12px;
-  padding:1.4rem;
-  text-align:center;
-  display:none;
-  animation:fadeUp .4s ease both;
-}
-.connected .tick{font-size:2.4rem;line-height:1}
-.connected .conn-title{
-  font-family:'Orbitron',sans-serif;
-  font-size:.85rem;
-  color:var(--accent);
-  margin:.5rem 0 .2rem;
-  letter-spacing:.1em;
-}
-.connected .conn-num{color:var(--muted);font-size:.8rem}
+/* ── Contact ── */
+.contact-list{display:flex;flex-direction:column;gap:.5rem;}
+.contact-row{display:flex;align-items:center;gap:.8rem;padding:.7rem .9rem;background:#0a0a0a;border:1px solid #1c1c1c;border-radius:8px;text-decoration:none;color:var(--text);transition:all .2s;}
+.contact-row:hover{border-color:var(--g);background:rgba(0,255,136,.04);}
+.contact-icon{font-size:1.2rem;width:28px;text-align:center;}
+.contact-info{}
+.contact-name{font-size:.75rem;}
+.contact-val{font-size:.6rem;color:var(--muted);}
 
-/* scanning anim */
-.scan-bar{
-  height:2px;
-  background:linear-gradient(90deg,transparent,var(--accent),transparent);
-  border-radius:1px;
-  margin-top:1rem;
-  animation:scan 1.8s linear infinite;
-}
-@keyframes scan{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
-.scan-wrap{overflow:hidden;border-radius:1px;display:none}
-.scan-wrap.active{display:block}
+/* ── Footer ── */
+.footer{text-align:center;font-size:.6rem;color:var(--muted);margin-top:1.5rem;letter-spacing:.1em;}
+.footer span{color:var(--g);}
 
-/* footer */
-.footer{
-  text-align:center;
-  margin-top:1.5rem;
-  font-size:.68rem;
-  color:var(--muted);
-  letter-spacing:.1em;
-  animation:fadeUp .7s ease .3s both;
-}
-.footer span{color:var(--accent)}
+/* ── Spinner ── */
+.spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Anims ── */
+@keyframes fadeD{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeU{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
 <body>
+<canvas id="snow"></canvas>
+<div class="line-wrap">
+  <div class="cline"></div><div class="cline"></div><div class="cline"></div>
+  <div class="cline"></div><div class="cline"></div>
+</div>
+
 <div class="wrap">
 
-  <div class="logo-area">
-    <div class="logo-icon">⚡</div>
+  <!-- Header -->
+  <div class="hdr">
+    <div class="logo-ring">⚡</div>
     <div class="logo-title">NMD · AXIS</div>
-    <div class="logo-sub">WHATSAPP BOT · CONNECT PANEL · V2.0</div>
+    <div class="logo-sub">WHATSAPP BOT · CONNECT PANEL · V3.0</div>
+    <div class="live-badge"><span class="live-dot"></span>ONLINE</div>
   </div>
 
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="stat"><div class="stat-label">BOT</div><div class="stat-val g" id="stBot">—</div></div>
+    <div class="stat"><div class="stat-label">UPTIME</div><div class="stat-val b" id="stUp">—</div></div>
+    <div class="stat"><div class="stat-label">VERSION</div><div class="stat-val p" id="stVer">—</div></div>
+  </div>
+
+  <!-- Connect card -->
   <div class="card">
+    <div class="card-top"></div>
     <div class="tabs">
       <button class="tab active" id="tabPair" onclick="switchTab('pair')">🔑 PAIR CODE</button>
       <button class="tab" id="tabQR" onclick="switchTab('qr')">📱 QR CODE</button>
     </div>
-
     <div class="card-body">
 
-      <!-- PAIR CODE PANEL -->
+      <!-- Pair panel -->
       <div id="panelPair">
-        <span class="field-label">ඔබේ WHATSAPP NUMBER (COUNTRY CODE සමඟ)</span>
-        <div class="input-wrap">
-          <span class="input-icon">📞</span>
+        <div class="inp-wrap">
+          <span class="inp-icon">📞</span>
           <input type="tel" id="numInput" placeholder="94771234567" inputmode="numeric" maxlength="15"/>
         </div>
-        <button class="btn" id="pairBtn" onclick="getPairCode()">⚡ GENERATE PAIR CODE</button>
-        <div class="status-line" id="pairStatus"></div>
-
-        <div class="scan-wrap" id="scanWrap">
-          <div class="scan-bar"></div>
-        </div>
-
-        <div class="code-reveal" id="codeBox">
-          <div class="code-label">YOUR PAIR CODE</div>
-          <div class="code-value" id="codeVal">— — — —</div>
+        <button class="btn btn-g" id="pairBtn" onclick="getPairCode()">⚡ GENERATE PAIR CODE</button>
+        <div class="status-msg" id="pairMsg"></div>
+        <div class="code-box" id="codeBox">
+          <div class="code-lbl">YOUR PAIR CODE</div>
+          <div class="code-val" id="codeVal">——</div>
           <div class="code-steps">
             <b>1.</b> WhatsApp විවෘත කරන්න<br>
-            <b>2.</b> ⋮ &gt; Linked Devices &gt; Link a Device<br>
-            <b>3.</b> "Link with phone number" select කරන්න<br>
-            <b>4.</b> ඉහත code එක ඇතුළත් කරන්න
+            <b>2.</b> ⋮ › Linked Devices › Link a Device<br>
+            <b>3.</b> "Link with phone number" select<br>
+            <b>4.</b> Code ඇතුළත් කරන්න
           </div>
         </div>
-
-        <div class="connected" id="connBox">
-          <div class="tick">✅</div>
-          <div class="conn-title">BOT CONNECTED!</div>
+        <div class="conn-box" id="connBox">
+          <div class="conn-tick">✅</div>
+          <div class="conn-title">CONNECTED!</div>
           <div class="conn-num" id="connNum"></div>
         </div>
       </div>
 
-      <!-- QR PANEL -->
+      <!-- QR panel -->
       <div id="panelQR" style="display:none">
-        <div style="text-align:center;padding:1rem 0">
-          <div style="font-size:.75rem;color:var(--muted);letter-spacing:.1em;margin-bottom:1.2rem">QR CODE CONNECT</div>
-          <div id="qrContainer" style="background:#fff;border-radius:12px;padding:1rem;display:inline-block">
-            <div style="color:#333;font-size:.8rem;padding:2rem">Loading QR...</div>
-          </div>
-          <div style="margin-top:1rem;font-size:.75rem;color:var(--muted)">WhatsApp → Linked Devices → Link a Device → Scan</div>
+        <button class="btn btn-b" onclick="getQR()">📱 GENERATE QR CODE</button>
+        <div class="status-msg" id="qrMsg"></div>
+        <div class="qr-box" id="qrBox">
+          <img id="qrImg" src="" alt="QR Code"/>
+          <div class="qr-note">WhatsApp → Linked Devices → Link a Device → Scan</div>
         </div>
       </div>
 
     </div>
   </div>
 
-  <div class="footer">
-    ⚡ NMD AXIS 🌐 · By <span>Nimesha Madhushan</span>
+  <!-- Settings card -->
+  <div class="card">
+    <div class="card-top p"></div>
+    <div class="card-body">
+      <div class="card-title">⚙️ BOT SETTINGS</div>
+      <div class="toggle-list" id="toggleList">
+        <div style="text-align:center;color:var(--muted);font-size:.7rem;padding:.5rem;">Bot connect කළාට පස්සේ settings load වෙනවා...</div>
+      </div>
+    </div>
   </div>
 
+  <!-- Contact card -->
+  <div class="card">
+    <div class="card-top y"></div>
+    <div class="card-body">
+      <div class="card-title">📬 CONTACT</div>
+      <div class="contact-list">
+        <a class="contact-row" href="https://wa.me/94784134577" target="_blank">
+          <span class="contact-icon">💬</span>
+          <div class="contact-info"><div class="contact-name">WhatsApp</div><div class="contact-val">+94 784 134 577</div></div>
+        </a>
+        <a class="contact-row" href="https://github.com/nima-axis" target="_blank">
+          <span class="contact-icon">🐙</span>
+          <div class="contact-info"><div class="contact-name">GitHub</div><div class="contact-val">github.com/nima-axis</div></div>
+        </a>
+        <a class="contact-row" href="https://www.youtube.com/@nmdaxis" target="_blank">
+          <span class="contact-icon">▶️</span>
+          <div class="contact-info"><div class="contact-name">YouTube</div><div class="contact-val">@nmdaxis</div></div>
+        </a>
+        <a class="contact-row" href="https://www.tiktok.com/@nmd.axis" target="_blank">
+          <span class="contact-icon">🎵</span>
+          <div class="contact-info"><div class="contact-name">TikTok</div><div class="contact-val">@nmd.axis</div></div>
+        </a>
+        <a class="contact-row" href="https://whatsapp.com/channel/0029Vb68g1c3LdQLQDkbAQ3M" target="_blank">
+          <span class="contact-icon">📢</span>
+          <div class="contact-info"><div class="contact-name">WhatsApp Channel</div><div class="contact-val">NMD AXIS Updates</div></div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">⚡ NMD AXIS V3.0 · By <span>Nimesha Madhushan</span></div>
 </div>
 
 <script>
-const BASE = window.location.origin;
-let pollTimer = null;
+// ── Snow ───────────────────────────────────────────────────────────────
+const canvas = document.getElementById('snow');
+const ctx = canvas.getContext('2d');
+let W, H, flakes = [];
+function resizeSnow() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resizeSnow();
+window.addEventListener('resize', resizeSnow);
+const COLORS = ['#00ff88','#00c4ff','#bf5fff','#ff3c6e','#ffe000','#ffffff'];
+for (let i = 0; i < 120; i++) {
+  flakes.push({ x: Math.random()*1000, y: Math.random()*1000, r: Math.random()*2.5+.5,
+    speed: Math.random()*.8+.2, drift: Math.random()*.4-.2,
+    color: COLORS[Math.floor(Math.random()*COLORS.length)], opacity: Math.random()*.7+.3 });
+}
+(function animSnow() {
+  ctx.clearRect(0,0,W,H);
+  flakes.forEach(f => {
+    ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI*2);
+    ctx.fillStyle = f.color; ctx.globalAlpha = f.opacity; ctx.fill(); ctx.globalAlpha = 1;
+    f.y += f.speed; f.x += f.drift;
+    if (f.y > H) { f.y = -5; f.x = Math.random()*W; }
+    if (f.x > W) f.x = 0; if (f.x < 0) f.x = W;
+  });
+  requestAnimationFrame(animSnow);
+})();
 
+// ── Tabs ──────────────────────────────────────────────────────────────
 function switchTab(t) {
   document.getElementById('tabPair').classList.toggle('active', t==='pair');
   document.getElementById('tabQR').classList.toggle('active', t==='qr');
@@ -1030,62 +958,143 @@ function switchTab(t) {
   document.getElementById('panelQR').style.display = t==='qr'?'block':'none';
 }
 
+// ── Status ─────────────────────────────────────────────────────────────
+async function fetchStatus() {
+  try {
+    const r = await fetch('/api/status'); const d = await r.json();
+    document.getElementById('stBot').textContent = d.connected ? 'ONLINE' : 'OFFLINE';
+    document.getElementById('stBot').style.color = d.connected ? 'var(--g)' : 'var(--r)';
+    document.getElementById('stUp').textContent = d.uptime || '—';
+    document.getElementById('stVer').textContent = 'v' + (d.version||'2.0');
+    if (d.connected) loadSettings();
+  } catch {}
+}
+fetchStatus(); setInterval(fetchStatus, 8000);
+
+// ── Pair Code ─────────────────────────────────────────────────────────
+let pollTimer = null;
 async function getPairCode() {
   const num = document.getElementById('numInput').value.trim().replace(/\D/g,'');
-  if (num.length < 7) { setStatus('Country code සමඟ number ඇතුළත් කරන්න.', 'err'); return; }
-
+  if (num.length < 7) { setMsg('pairMsg', 'Country code සමඟ number ඇතුළත් කරන්න.', 'err'); return; }
   const btn = document.getElementById('pairBtn');
-  btn.disabled = true;
-  setStatus('Checking...', '');
-
-  const chk = await fetch(BASE+'/api/session?number='+num).then(r=>r.json()).catch(()=>null);
-  if (chk?.connected) { showConnected(num); btn.disabled=false; return; }
-
-  setStatus('Pair code ජනනය කරමින්...', 'ok');
-  document.getElementById('scanWrap').classList.add('active');
-
-  const res = await fetch(BASE+'/api/pair?number='+num).then(r=>r.json()).catch(()=>null);
-  document.getElementById('scanWrap').classList.remove('active');
-
-  if (!res) { setStatus('Server error. නැවත try කරන්න.', 'err'); btn.disabled=false; return; }
-  if (res.alreadyConnected) { showConnected(num); btn.disabled=false; return; }
-  if (!res.status) { setStatus(res.message||'Error occurred.', 'err'); btn.disabled=false; return; }
-
-  document.getElementById('codeVal').textContent = res.code;
-  document.getElementById('codeBox').style.display = 'block';
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>GENERATING...';
+  setMsg('pairMsg', 'Pair code ජනනය කරමින්...', 'ok');
+  document.getElementById('codeBox').style.display = 'none';
   document.getElementById('connBox').style.display = 'none';
-  setStatus('✓ Code ලැබුණා — WhatsApp හි ඇතුළත් කරන්න.', 'ok');
-  btn.disabled = false;
-  startPoll(num);
+  try {
+    const r = await fetch('/api/pair?number='+num); const d = await r.json();
+    if (d.alreadyConnected) { showConnected(num); }
+    else if (d.status && d.code) {
+      document.getElementById('codeVal').textContent = d.code;
+      document.getElementById('codeBox').style.display = 'block';
+      setMsg('pairMsg', '✓ Code ලැබුණා — 60s ඇතුළත WhatsApp හි enter කරන්න', 'ok');
+      startPoll(num);
+    } else { setMsg('pairMsg', '❌ ' + (d.message||'Error. නැවත try කරන්න.'), 'err'); }
+  } catch { setMsg('pairMsg', '❌ Server error. නැවත try කරන්න.', 'err'); }
+  btn.disabled = false; btn.innerHTML = '⚡ GENERATE PAIR CODE';
+}
+
+// ── QR Code ─────────────────────────────────────────────────────────
+async function getQR() {
+  setMsg('qrMsg', 'QR Code ජනනය කරමින්...', 'ok');
+  document.getElementById('qrBox').style.display = 'none';
+  try {
+    const r = await fetch('/qr');
+    if (r.ok && r.headers.get('content-type')?.includes('image')) {
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      document.getElementById('qrImg').src = url;
+      document.getElementById('qrBox').style.display = 'block';
+      setMsg('qrMsg', '✓ QR Code scan කරන්න (20s ඇතුළත)', 'ok');
+    } else {
+      // Try via API
+      const d = await r.json().catch(()=>null);
+      setMsg('qrMsg', '❌ QR Code ලැබෙන්නෙ නෑ — Pair Code tab use කරන්න', 'err');
+    }
+  } catch { setMsg('qrMsg', '❌ QR ජනනය අසාර්ථකයි', 'err'); }
 }
 
 function showConnected(num) {
   document.getElementById('codeBox').style.display = 'none';
   document.getElementById('connBox').style.display = 'block';
-  document.getElementById('connNum').textContent = '+' + num + ' · Bot Active ✓';
-  setStatus('', '');
-  if (pollTimer) { clearInterval(pollTimer); pollTimer=null; }
+  document.getElementById('connNum').textContent = '+' + num + ' · Active ✓';
+  setMsg('pairMsg','','');
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  loadSettings();
 }
-
 function startPoll(num) {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(async () => {
-    const r = await fetch(BASE+'/api/session?number='+num).then(x=>x.json()).catch(()=>null);
-    if (r?.connected) showConnected(num);
+    try { const r = await fetch('/api/session?number='+num); const d = await r.json(); if (d.connected) showConnected(num); } catch {}
   }, 4000);
-  setTimeout(() => { if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }, 120000);
+  setTimeout(()=>{ if(pollTimer){clearInterval(pollTimer);pollTimer=null;} }, 120000);
+}
+function setMsg(id, msg, type) {
+  const el = document.getElementById(id); el.textContent = msg;
+  el.className = 'status-msg' + (type?' '+type:'');
 }
 
-function setStatus(msg, type) {
-  const el = document.getElementById('pairStatus');
-  el.textContent = msg;
-  el.className = 'status-line' + (type?' '+type:'');
+// ── Settings ──────────────────────────────────────────────────────────
+const SETTINGS_META = [
+  {key:'mode',       label:'Bot Mode',        sub:'Public / Self'},
+  {key:'anticall',   label:'Anti Call',        sub:'Incoming calls block'},
+  {key:'antidelete', label:'Anti Delete',      sub:'Deleted msg recover'},
+  {key:'autostatus', label:'Auto Status View', sub:'Status auto view'},
+  {key:'autostatusreact',label:'Status React', sub:'Status auto react'},
+  {key:'autorecording',label:'Auto Recording', sub:'Recording indicator'},
+  {key:'autobio',    label:'Auto Bio',         sub:'Bio auto update'},
+  {key:'autoread',   label:'Auto Read',        sub:'Messages auto read'},
+  {key:'autotyping', label:'Auto Typing',      sub:'Typing indicator'},
+  {key:'readsw',     label:'Read Status',      sub:'Own status auto read'},
+  {key:'antilink',   label:'Anti Link',        sub:'Group link filter'},
+  {key:'antispam',   label:'Anti Spam',        sub:'Spam protection'},
+  {key:'welcome',    label:'Welcome Msg',      sub:'New member welcome'},
+  {key:'leave',      label:'Leave Msg',        sub:'Member leave message'},
+  {key:'nsfw',       label:'NSFW Filter',      sub:'Adult content filter'},
+  {key:'grouponly',  label:'Group Only',       sub:'Group commands only'},
+  {key:'privateonly',label:'Private Only',     sub:'Private commands only'},
+];
+
+async function loadSettings() {
+  try {
+    const r = await fetch('/api/settings'); const d = await r.json();
+    if (!d.status) return;
+    const list = document.getElementById('toggleList');
+    list.innerHTML = '';
+    SETTINGS_META.forEach(s => {
+      let val = s.key==='mode' ? d.settings.mode==='public' : !!d.settings[s.key];
+      list.innerHTML += \`
+        <div class="toggle-row">
+          <div><div class="toggle-label">\${s.label}</div><div class="toggle-sub">\${s.sub}</div></div>
+          <label class="toggle-sw">
+            <input type="checkbox" \${val?'checked':''} onchange="toggleSetting('\${s.key}',this.checked)"/>
+            <span class="slider"></span>
+          </label>
+        </div>\`;
+    });
+  } catch {}
 }
+
+async function toggleSetting(feature, value) {
+  try {
+    await fetch('/api/toggle', { method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ feature, value: feature==='mode'?(value?'public':'self'):value })
+    });
+  } catch {}
+}
+
+// ── Enter key ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('numInput');
+  if (inp) inp.addEventListener('keydown', e => { if(e.key==='Enter') getPairCode(); });
+});
 </script>
 </body>
 </html>
 `);
 });
+
 
 app.all('/process', (req, res) => {
 	const { send } = req.query;
@@ -1294,92 +1303,118 @@ app.get('/api/pair', async (req, res) => {
 	if (!number) return res.status(400).json({ status: false, message: '?number=94xxxxxxxxx' });
 	const cleanNumber = number.replace(/[^0-9]/g, '');
 	if (cleanNumber.length < 7) return res.status(400).json({ status: false, message: 'Country code සමඟ ඇතුළත් කරන්න. Ex: 94xxxxxxxxx' });
-	// Already connected
+
+	// Already fully connected
 	if (global.botSessions[cleanNumber]?.authState?.creds?.registered) {
 		return res.json({ status: false, alreadyConnected: true, message: 'Bot දැනටමත් connected!' });
 	}
-	// Pending session — return existing code
+	// Return cached code if still pending
 	if (global.pairSessions[cleanNumber]?.code) {
 		return res.json({ status: true, code: global.pairSessions[cleanNumber].code, number: cleanNumber });
 	}
+	// Kill any stale session for this number before starting fresh
+	if (global.pairSessions[cleanNumber]?.sock) {
+		try { global.pairSessions[cleanNumber].sock.ev.removeAllListeners(); global.pairSessions[cleanNumber].sock.ws?.close?.(); } catch(_) {}
+		delete global.pairSessions[cleanNumber];
+	}
+
 	try {
-		const { default: makeWASocket_s, useMultiFileAuthState: uMFAS, makeCacheableSignalKeyStore: mCSKS, fetchLatestWaWebVersion: fLWWV, DisconnectReason: DR } = require('baileys');
+		// Try baileys first, fallback to @whiskeysockets/baileys
+		let baileysMod;
+		try { baileysMod = require('baileys'); } catch(_) { baileysMod = require('@whiskeysockets/baileys'); }
+		const makeWASocket_s = baileysMod.default || baileysMod.makeWASocket || baileysMod;
+		const { useMultiFileAuthState: uMFAS, makeCacheableSignalKeyStore: mCSKS, fetchLatestWaWebVersion: fLWWV, DisconnectReason: DR, Browsers } = baileysMod;
 		const { Boom: Boom_s } = require('@hapi/boom');
-		const sessDir = `./database/jadibot/${cleanNumber}`;
+
+		const sessDir = './database/jadibot/' + cleanNumber;
+		require('child_process').execSync('rm -rf ' + sessDir); // fresh session every time
 		const { state, saveCreds } = await uMFAS(sessDir);
 		const { version } = await fLWWV();
 		const level_s = pino_s({ level: 'silent' });
-		// Fix for Baileys RC9+ — browser string + defaultQueryTimeoutMs critical for pairing
+
 		const sock = makeWASocket_s({
-			version, logger: level_s, syncFullHistory: false, maxMsgRetryCount: 5,
-			msgRetryCounterCache: _retryCache, retryRequestDelayMs: 250,
-			connectTimeoutMs: 60000, keepAliveIntervalMs: 25000, printQRInTerminal: false,
+			version,
+			logger: level_s,
+			syncFullHistory: false,
+			maxMsgRetryCount: 3,
+			msgRetryCounterCache: _retryCache,
+			retryRequestDelayMs: 250,
+			connectTimeoutMs: 60000,
+			keepAliveIntervalMs: 30000,
+			printQRInTerminal: false,
 			defaultQueryTimeoutMs: undefined,
-			browser: ['Mac OS', 'Chrome', '14.4.1'],
+			browser: Browsers ? Browsers.macOS('Chrome') : ['Mac OS', 'Chrome', '120.0.0'],
 			auth: { creds: state.creds, keys: mCSKS(state.keys, level_s) },
 		});
+
 		global.pairSessions[cleanNumber] = { sock, code: null };
 		sock.ev.on('creds.update', saveCreds);
-		let _pairCodeRequested = false;
+
+		let _codeRequested = false;
 		sock.ev.on('connection.update', async (update) => {
 			const { connection, lastDisconnect, qr } = update;
 
-			// KEY FIX: QR event ලැබෙනකොටම pair code request කරනවා
-			// WhatsApp spec: requestPairingCode() is only valid AFTER WS handshake
-			// (when QR would normally show). Calling during "connecting" = "Couldn't link device"
-			if (!!qr && !sock.authState.creds.registered && !_pairCodeRequested) {
-				_pairCodeRequested = true;
-				const requestCodeWithRetry = async (attempt = 1) => {
-					if (sock.authState.creds.registered) return;
+			// Official Baileys docs: request on "connecting" OR qr event — whichever comes first
+			if ((connection === 'connecting' || !!qr) && !_codeRequested && !sock.authState.creds.registered) {
+				_codeRequested = true;
+				// Small delay to let WS handshake settle
+				await new Promise(r => setTimeout(r, 1500));
+				for (let attempt = 1; attempt <= 5; attempt++) {
 					try {
 						const code = await sock.requestPairingCode(cleanNumber);
 						const fmt = code?.match(/.{1,4}/g)?.join('-') || code;
 						if (global.pairSessions[cleanNumber]) {
 							global.pairSessions[cleanNumber].code = fmt;
-							console.log('✅ Pair code generated: ' + fmt + ' (attempt ' + attempt + ')');
+							console.log('[pair] ✅ Code: ' + fmt);
 						}
+						break;
 					} catch(e) {
 						console.log('[pair attempt ' + attempt + '] ' + e.message);
-						if (attempt < 5 && global.pairSessions[cleanNumber] && !global.pairSessions[cleanNumber].code) {
-							setTimeout(() => requestCodeWithRetry(attempt + 1), attempt * 2000);
-						}
+						if (attempt < 5) await new Promise(r => setTimeout(r, attempt * 3000));
 					}
-				};
-				await requestCodeWithRetry(1);
+				}
 			}
+
 			if (connection === 'open') {
 				global.botSessions[cleanNumber] = sock;
 				delete global.pairSessions[cleanNumber];
-				console.log(`✅ JadiBot session connected: +${cleanNumber}`);
-				// Attach message handlers safely
+				console.log('[pair] Connected: +' + cleanNumber);
 				try {
 					const { MessagesUpsert, GroupParticipantsUpdate } = require('./message');
 					sock.ev.on('messages.upsert', async (msg) => {
-						try { await MessagesUpsert(sock, msg, global.store || {}); } catch(e) { console.log('[msg]', e.message); }
+						try { await MessagesUpsert(sock, msg, global.store || {}); } catch(_) {}
 					});
 					sock.ev.on('group-participants.update', async (upd) => {
-						try { await GroupParticipantsUpdate(sock, upd, global.store || {}); } catch(e) {}
+						try { await GroupParticipantsUpdate(sock, upd, global.store || {}); } catch(_) {}
 					});
-				} catch(e) { console.log('[jadibot handler]', e.message); }
+				} catch(_) {}
 			}
+
 			if (connection === 'close') {
 				const reason = new Boom_s(lastDisconnect?.error)?.output?.statusCode;
-				if (reason === DR.loggedOut) {
+				if (reason === DR.loggedOut || reason === 401) {
 					delete global.botSessions[cleanNumber];
 					delete global.pairSessions[cleanNumber];
-					require('child_process').exec(`rm -rf ./database/jadibot/${cleanNumber}`);
-				} else { delete global.botSessions[cleanNumber]; }
+					require('child_process').exec('rm -rf ' + sessDir);
+				} else {
+					delete global.botSessions[cleanNumber];
+				}
 			}
 		});
+
+		// Wait up to 40s for code
 		let waited = 0;
-		// Fix: 15s → 30s increased for Railway cloud slow start
-		while (!global.pairSessions[cleanNumber]?.code && waited < 30000) {
-			await new Promise(r => setTimeout(r, 500)); waited += 500;
+		while (!global.pairSessions[cleanNumber]?.code && waited < 40000) {
+			await new Promise(r => setTimeout(r, 500));
+			waited += 500;
 		}
 		const code = global.pairSessions[cleanNumber]?.code;
-		if (!code) return res.status(504).json({ status: false, message: 'Code ජනනය timeout. Railway server slow නිසා විය හැකිය. නැවත try කරන්න.' });
-		return res.json({ status: true, code, number: cleanNumber, message: 'WhatsApp > Linked Devices > Link with phone number' });
-	} catch(e) { return res.status(500).json({ status: false, message: e.message }); }
+		if (!code) return res.status(504).json({ status: false, message: 'Timeout — නැවත Generate කරන්න.' });
+		return res.json({ status: true, code, number: cleanNumber });
+	} catch(e) {
+		console.log('[/api/pair error]', e.message);
+		return res.status(500).json({ status: false, message: e.message });
+	}
 });
 
 app.get('/api/session', (req, res) => {
