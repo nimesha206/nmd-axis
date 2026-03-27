@@ -1778,5 +1778,26 @@ async function start() {
     }
 }
 
+// 🔄 Auto Git Pull Function එක මෙතැනින් එකතු කරන්න
+function startAutoGitPull(getProcess) {
+    setInterval(() => {
+        try {
+            console.log(chalk.blue('🔄 අලුත් Updates තිබේදැයි පරීක්ෂා කරමින්...'));
+            execSync('git fetch');
+            const status = execSync('git status').toString();
+            if (status.includes('behind')) {
+                console.log(chalk.green('✅ අලුත් Updates හමු විය! Update වෙමින් පවතී...'));
+                execSync('git pull');
+                const p = getProcess();
+                if (p) p.send('reset');
+            } else {
+                console.log(chalk.gray('ℹ️ Bot එක දැනටමත් අලුත්ම සංස්කරණයට (Up-to-date) ඇත.'));
+            }
+        } catch (e) {
+            console.log(chalk.red('⚠ Git Update පරීක්ෂාව අසාර්ථකයි: ' + e.message));
+        }
+    }, 1000 * 60 * 60); // සෑම පැයකටම වරක් පරීක්ෂා කරයි
+}
+
 // ධාවනය කරමින්
 start();
