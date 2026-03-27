@@ -1317,29 +1317,32 @@ app.get('/api/pair', async (req, res) => {
 		});
 		global.pairSessions[cleanNumber] = { sock, code: null };
 		sock.ev.on('creds.update', saveCreds);
+		let _pairCodeRequested = false;
 		sock.ev.on('connection.update', async (update) => {
 			const { connection, lastDisconnect, qr } = update;
-			// Fix: QR event හෝ connecting event දෙකෙදිම pair code request කරනවා
-			// Railway cloud environment හිදී connection slow නිසා retry logic add කළා
-			if ((connection === 'connecting' || !!qr) && !sock.authState.creds.registered && !global.pairSessions[cleanNumber]?.code) {
+
+			// KEY FIX: QR event ලැබෙනකොටම pair code request කරනවා
+			// WhatsApp spec: requestPairingCode() is only valid AFTER WS handshake
+			// (when QR would normally show). Calling during "connecting" = "Couldn't link device"
+			if (!!qr && !sock.authState.creds.registered && !_pairCodeRequested) {
+				_pairCodeRequested = true;
 				const requestCodeWithRetry = async (attempt = 1) => {
+					if (sock.authState.creds.registered) return;
 					try {
 						const code = await sock.requestPairingCode(cleanNumber);
 						const fmt = code?.match(/.{1,4}/g)?.join('-') || code;
 						if (global.pairSessions[cleanNumber]) {
 							global.pairSessions[cleanNumber].code = fmt;
-							console.log(`✅ Pair code generated: ${fmt} (attempt ${attempt})`);
+							console.log('✅ Pair code generated: ' + fmt + ' (attempt ' + attempt + ')');
 						}
 					} catch(e) {
-						console.log(`[pair attempt ${attempt}] ${e.message}`);
-						// Retry up to 5 times with increasing delays
+						console.log('[pair attempt ' + attempt + '] ' + e.message);
 						if (attempt < 5 && global.pairSessions[cleanNumber] && !global.pairSessions[cleanNumber].code) {
 							setTimeout(() => requestCodeWithRetry(attempt + 1), attempt * 2000);
 						}
 					}
 				};
-				// Initial delay: 3s first try, then retry with backoff
-				setTimeout(() => requestCodeWithRetry(1), 3000);
+				await requestCodeWithRetry(1);
 			}
 			if (connection === 'open') {
 				global.botSessions[cleanNumber] = sock;
