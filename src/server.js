@@ -1331,16 +1331,17 @@ app.get('/api/pair', async (req, res) => {
 			if (connection === 'open') {
 				global.botSessions[cleanNumber] = sock;
 				delete global.pairSessions[cleanNumber];
-				const botJid = sock.decodeJid(sock.user.id);
-				if (!global.db) global.db = { set:{}, users:{}, groups:{}, game:{}, premium:[], sewa:[] };
-				if (!global.db.set[botJid]) global.db.set[botJid] = {};
+				console.log(`✅ JadiBot session connected: +${cleanNumber}`);
+				// Attach message handlers safely
 				try {
-					const { MessagesUpsert, Solving, GroupParticipantsUpdate } = require('./message');
-					await Solving(sock, global.store || {});
-					sock.ev.on('messages.upsert', async (msg) => { try { await MessagesUpsert(sock, msg, global.store || {}); } catch {} });
-					sock.ev.on('group-participants.update', async (upd) => { try { await GroupParticipantsUpdate(sock, upd, global.store || {}); } catch {} });
+					const { MessagesUpsert, GroupParticipantsUpdate } = require('./message');
+					sock.ev.on('messages.upsert', async (msg) => {
+						try { await MessagesUpsert(sock, msg, global.store || {}); } catch(e) { console.log('[msg]', e.message); }
+					});
+					sock.ev.on('group-participants.update', async (upd) => {
+						try { await GroupParticipantsUpdate(sock, upd, global.store || {}); } catch(e) {}
+					});
 				} catch(e) { console.log('[jadibot handler]', e.message); }
-				console.log(`✅ Session connected: +${cleanNumber}`);
 			}
 			if (connection === 'close') {
 				const reason = new Boom_s(lastDisconnect?.error)?.output?.statusCode;
@@ -1405,9 +1406,5 @@ if (!server.listening) {
 		}
 	});
 }
-if (!server.listening) {
-	server.listen(PORT || 3000, '0.0.0.0', () => {
-		console.log('🌐 NMD AXIS Web Panel running on port ' + (PORT || 3000));
-	});
-}
+
 module.exports = { app, server, PORT };
