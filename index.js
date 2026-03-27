@@ -362,9 +362,8 @@ print('Baileys', `v${require('./package.json').dependencies.baileys}`);
 print('Date & Time', new Date().toLocaleString('en-US', { timeZone: 'Asia/Colombo', hour12: false }));
 console.log(chalk.green.bold('╚' + ('═'.repeat(30))));
 
-server.listen(PORT, () => {
-	console.log('🧬🌐『 𝖭𝖬𝖣 𝖠𝖷𝖨𝖲 』🌐🧬 [MINI BOT] ක්‍රියාකාරී වී ඇත!');
-});
+// Server listening is handled by src/server.js directly
+console.log('🧬🌐『 𝖭𝖬𝖣 𝖠𝖷𝖨𝖲 』🌐🧬 [MINI BOT] ක්‍රියාකාරී වී ඇත!');
 
 // reconnect attempt counter
 let _reconnectCount = 0;
