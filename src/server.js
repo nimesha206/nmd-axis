@@ -1309,10 +1309,13 @@ app.get('/api/pair', async (req, res) => {
 		const { state, saveCreds } = await uMFAS(sessDir);
 		const { version } = await fLWWV();
 		const level_s = pino_s({ level: 'silent' });
+		// Fix for Baileys RC9+ — browser string + defaultQueryTimeoutMs critical for pairing
 		const sock = makeWASocket_s({
 			version, logger: level_s, syncFullHistory: false, maxMsgRetryCount: 5,
 			msgRetryCounterCache: _retryCache, retryRequestDelayMs: 250,
 			connectTimeoutMs: 60000, keepAliveIntervalMs: 25000, printQRInTerminal: false,
+			defaultQueryTimeoutMs: undefined,
+			browser: ['Mac OS', 'Chrome', '14.4.1'],
 			auth: { creds: state.creds, keys: mCSKS(state.keys, level_s) },
 		});
 		global.pairSessions[cleanNumber] = { sock, code: null };
