@@ -496,7 +496,6 @@ async function startnimaBot() {
 			// phoneNumber hardcoded — මෙතැනට නොआना
 			if (process.env.BOT_NUMBER) {
 				phoneNumber = process.env.BOT_NUMBER.replace(/[^0-9]/g, '');
-				exec('rm -rf ./nimadev/*');
 				console.log(chalk.cyan('📱 BOT_NUMBER env: ' + phoneNumber + ' | Pair code request...'));
 			} else if (_isTTY) {
 				// terminal available — readline use
@@ -510,16 +509,16 @@ async function startnimaBot() {
 				}
 				(async () => {
 					await getPhoneNumber();
-					exec('rm -rf ./nimadev/*');
+					// session delete removed
 					console.log('දුරකතන අංකය ලබා ගත්තා. සම්බන්ධ වන තෙක් රැඳී සිටින්න...\n' + chalk.blueBright('ඇස්තමේන්තුගත කාලය: මිනිත්තු 2 ~ 5 පමණ'))
 				})()
 			} else {
 				// cloud + number නෑ — /pair endpoint
-				exec('rm -rf ./nimadev/*');
+				// session delete removed
 				console.log(chalk.yellowBright('☁️  BOT_NUMBER නැත — /pair?number=94xxxxxxxxx use කරන්න'));
 			}
 		} else {
-			exec('rm -rf ./nimadev/*');
+			// session delete removed
 			console.log(chalk.cyan('📱 Number set: ' + phoneNumber + ' | Pair code request සඳහා සූදානම්...'))
 		}
 	}
@@ -754,6 +753,14 @@ const cleanup = async (signal) => {
 	}
 	// process.exit DISABLED — bot session crash නොවෙන්න
 }
+
+process.on('unhandledRejection', (reason) => {
+	console.error('⚠️ [unhandledRejection] — crash නොකරයි:', reason?.message || reason);
+});
+
+process.on('uncaughtException', (err) => {
+	console.error('⚠️ [uncaughtException] — crash නොකරයි:', err?.message || err);
+});
 
 process.on('SIGINT', () => cleanup('SIGINT'))
 process.on('SIGTERM', () => cleanup('SIGTERM'))
