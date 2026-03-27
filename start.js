@@ -1718,6 +1718,34 @@ async function start() {
         const osInfo = detectOS();
         log.header(`🚀 🧬🌐『 𝖭𝖬𝖣 𝖠𝖷𝖨𝖲 』🌐🧬 ආරම්භ වෙමින්\n${chalk.yellow(`Platform: ${osInfo.display}`)}`);
 
+        // ── Baileys RC9 Patch ────────────────────────────────────────────
+        // Fix 3 known bugs in Baileys 7.0.0-rc.9 that break pairing code auth
+        try {
+            const bPath = path.join(__dirname, 'node_modules/@whiskeysockets/baileys/lib');
+            const vcFile = path.join(bPath, 'Utils/validate-connection.js');
+            const skFile = path.join(bPath, 'Socket/socket.js');
+            if (fs.existsSync(vcFile)) {
+                let vc = fs.readFileSync(vcFile, 'utf8');
+                // Patch 1: passive: true → passive: false
+                const vc1 = vc.replace(/passive:\s*true/g, 'passive: false');
+                // Patch 2: remove lidDbMigrated field that confuses WA server
+                const vc2 = vc1.replace(/,?\s*lidDbMigrated:\s*[^,}
+]+/g, '');
+                if (vc !== vc2) { fs.writeFileSync(vcFile, vc2); console.log('✅ [Baileys RC9 Patch] validate-connection.js patched'); }
+                else { console.log('ℹ [Baileys RC9 Patch] validate-connection.js already patched or pattern not found'); }
+            }
+            if (fs.existsSync(skFile)) {
+                let sk = fs.readFileSync(skFile, 'utf8');
+                // Patch 3: await noise.finishInit() → noise.finishInit()
+                const sk2 = sk.replace(/await noise\.finishInit\(\)/g, 'noise.finishInit()');
+                if (sk !== sk2) { fs.writeFileSync(skFile, sk2); console.log('✅ [Baileys RC9 Patch] socket.js patched'); }
+                else { console.log('ℹ [Baileys RC9 Patch] socket.js already patched or pattern not found'); }
+            }
+        } catch(patchErr) {
+            console.log('⚠ [Baileys RC9 Patch] patch error (non-fatal):', patchErr.message);
+        }
+        // ─────────────────────────────────────────────────────────────────
+
         // ප්‍රධාන යෙදුම ආරම්භ කරමින්
         let args = [path.join(__dirname, 'index.js'), ...process.argv.slice(2)];
         let p = spawn(process.argv[0], args, {
