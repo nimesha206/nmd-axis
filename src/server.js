@@ -1405,5 +1405,9 @@ if (!server.listening) {
 		}
 	});
 }
-
+if (!server.listening) {
+	server.listen(PORT || 3000, '0.0.0.0', () => {
+		console.log('🌐 NMD AXIS Web Panel running on port ' + (PORT || 3000));
+	});
+}
 module.exports = { app, server, PORT };
