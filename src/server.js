@@ -841,47 +841,30 @@ app.get('/api/settings', panelAuth, (req, res) => {
 });
 
 // ── Toggle / Update Setting ───────────────────────────────────────────────────
-app.post('/api/toggle', panelAuth, async (req, res) => {
-	const nima = global.nimaInstance;
-	if (!nima || !nima.authState?.creds?.registered) {
-		return res.status(503).json({ status: false, message: 'Bot connect වී නොමැත.' });
-	}
-
-	const { feature, value } = req.body;
-	const botJid = nima.decodeJid(nima.user.id);
+app.post('/api/toggle', panelAuth, (req, res) => {
+	const { number, feature, value } = req.body;
+	const clean = (number||'').replace(/[^0-9]/g,'');
+	const botJid = clean ? clean+'@s.whatsapp.net' : (() => {
+		const n=global.nimaInstance; return n?.authState?.creds?.registered ? n.decodeJid(n.user.id) : null;
+	})();
+	if (!botJid) return res.status(503).json({ status: false, message: 'Session not found.' });
+	if (!global.db) global.db = { set:{} };
 	if (!global.db.set[botJid]) global.db.set[botJid] = {};
 	const set = global.db.set[botJid];
-
-	const boolFeatures = [
-		'anticall', 'antidelete', 'autostatus', 'autostatusreact', 'autorecording',
-		'autobio', 'autoread', 'autotyping', 'readsw', 'multiprefix', 'antispam',
-		'antilink', 'antivirtex', 'antihidetag', 'antitagsw', 'welcome', 'leave',
-		'promote', 'demote', 'nsfw', 'grouponly', 'privateonly', 'didyoumean', 'autobackup'
-	];
-
+	const boolF = ['anticall','antidelete','autostatus','autostatusreact','autorecording','autobio','autoread','autotyping','readsw','multiprefix','antispam','antilink','antivirtex','antihidetag','antitagsw','welcome','leave','promote','demote','nsfw','grouponly','privateonly','didyoumean','autobackup'];
 	if (feature === 'mode') {
-		// mode: 'public' or 'self'
-		if (value === 'public') {
-			set.public = true;
-			nima.public = true;
-			set.grouponly = false;
-			set.privateonly = false;
-		} else {
-			set.public = false;
-			nima.public = false;
-		}
-		if (global.db) await require('../src/database').dataBase && null; // write triggers on interval
-		res.json({ status: true, feature: 'mode', value: set.public ? 'public' : 'self' });
-	} else if (boolFeatures.includes(feature)) {
+		set.public = (value === 'public');
+		const sock = global.botSessions?.[clean] || global.nimaInstance;
+		if (sock) sock.public = set.public;
+		return res.json({ status: true, feature: 'mode', value: set.public ? 'public' : 'self' });
+	} else if (boolF.includes(feature)) {
 		const newVal = typeof value === 'boolean' ? value : !set[feature];
 		set[feature] = newVal;
-		res.json({ status: true, feature, value: newVal });
+		return res.json({ status: true, feature, value: newVal });
 	} else {
-		res.status(400).json({ status: false, message: `'${feature}' feature හඳුනාගත නොහැකි විය.` });
+		return res.status(400).json({ status: false, message: 'Unknown feature: '+feature });
 	}
 });
-
-// ── Bot Info (public — no auth needed) ───────────────────────────────────────
 app.get('/api/info', (req, res) => {
 	const nima = global.nimaInstance;
 	const connected = !!(nima && nima.authState?.creds?.registered);
@@ -893,43 +876,98 @@ app.get('/api/info', (req, res) => {
 	});
 });
 
-// ── Pair Code (enhanced — supports re-pair) ───────────────────────────────────
-// (original /pair endpoint still intact above — this is alias with better error)
+// ── Multi-Session Pair (JadiBot system) ──────────────────────────────────────
+const pino_s = require('pino');
+const NodeCache_s = require('node-cache');
+const _retryCache = new NodeCache_s();
+if (!global.pairSessions) global.pairSessions = {};
+if (!global.botSessions) global.botSessions = {};
+
 app.get('/api/pair', async (req, res) => {
 	const { number } = req.query;
-	if (!number) return res.status(400).json({ status: false, message: 'number query param අවශ්‍යයි. ?number=94xxxxxxxxx' });
-
-	const nima = global.nimaInstance;
-	if (!nima) return res.status(503).json({ status: false, message: 'Bot server start වෙමින් පවතී. තත්පර 10කින් නැවත උත්සාහ කරන්න.' });
-
-	if (nima.authState?.creds?.registered) {
-		return res.status(200).json({ status: false, alreadyConnected: true, message: 'Bot දැනටමත් connected. Disconnect කර නැවත pair කරන්න.' });
+	if (!number) return res.status(400).json({ status: false, message: '?number=94xxxxxxxxx' });
+	const cleanNumber = number.replace(/[^0-9]/g, '');
+	if (cleanNumber.length < 7) return res.status(400).json({ status: false, message: 'Country code සමඟ ඇතුළත් කරන්න. Ex: 94xxxxxxxxx' });
+	// Already connected
+	if (global.botSessions[cleanNumber]?.authState?.creds?.registered) {
+		return res.json({ status: false, alreadyConnected: true, message: 'Bot දැනටමත් connected!' });
 	}
-
+	// Pending session — return existing code
+	if (global.pairSessions[cleanNumber]?.code) {
+		return res.json({ status: true, code: global.pairSessions[cleanNumber].code, number: cleanNumber });
+	}
 	try {
-		const cleanNumber = number.replace(/[^0-9]/g, '');
-		if (cleanNumber.length < 7) return res.status(400).json({ status: false, message: 'අංකය වලංගු නොවේ. Country code සමඟ ඇතුළත් කරන්න. (Ex: 94xxxxxxxxx)' });
-
-		// Update global number_bot so bot uses this number
-		global.number_bot = cleanNumber;
-
-		const code = await nima.requestPairingCode(cleanNumber);
-		const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
-		return res.json({
-			status: true,
-			message: 'Pair code ලැබුණා!',
-			instructions: 'WhatsApp > Linked Devices > Link with phone number > Code ඇතුළත් කරන්න',
-			number: cleanNumber,
-			code: formatted,
-			expires: '60 seconds'
+		const { default: makeWASocket_s, useMultiFileAuthState: uMFAS, makeCacheableSignalKeyStore: mCSKS, fetchLatestWaWebVersion: fLWWV, DisconnectReason: DR } = require('baileys');
+		const { Boom: Boom_s } = require('@hapi/boom');
+		const sessDir = `./database/jadibot/${cleanNumber}`;
+		const { state, saveCreds } = await uMFAS(sessDir);
+		const { version } = await fLWWV();
+		const level_s = pino_s({ level: 'silent' });
+		const sock = makeWASocket_s({
+			version, logger: level_s, syncFullHistory: false, maxMsgRetryCount: 5,
+			msgRetryCounterCache: _retryCache, retryRequestDelayMs: 250,
+			connectTimeoutMs: 60000, keepAliveIntervalMs: 25000, printQRInTerminal: false,
+			auth: { creds: state.creds, keys: mCSKS(state.keys, level_s) },
 		});
-	} catch (e) {
-		return res.status(500).json({ status: false, message: 'Pair code generate කිරීම අසාර්ථකයි.', error: e.message });
-	}
+		global.pairSessions[cleanNumber] = { sock, code: null };
+		sock.ev.on('creds.update', saveCreds);
+		sock.ev.on('connection.update', async (update) => {
+			const { connection, lastDisconnect } = update;
+			if (connection === 'connecting' && !sock.authState.creds.registered) {
+				setTimeout(async () => {
+					try {
+						const code = await sock.requestPairingCode(cleanNumber);
+						const fmt = code?.match(/.{1,4}/g)?.join('-') || code;
+						if (global.pairSessions[cleanNumber]) global.pairSessions[cleanNumber].code = fmt;
+					} catch(e) { console.log('[pair]', e.message); }
+				}, 3000);
+			}
+			if (connection === 'open') {
+				global.botSessions[cleanNumber] = sock;
+				delete global.pairSessions[cleanNumber];
+				const botJid = sock.decodeJid(sock.user.id);
+				if (!global.db) global.db = { set:{}, users:{}, groups:{}, game:{}, premium:[], sewa:[] };
+				if (!global.db.set[botJid]) global.db.set[botJid] = {};
+				try {
+					const { MessagesUpsert, Solving, GroupParticipantsUpdate } = require('./message');
+					await Solving(sock, global.store || {});
+					sock.ev.on('messages.upsert', async (msg) => { try { await MessagesUpsert(sock, msg, global.store || {}); } catch {} });
+					sock.ev.on('group-participants.update', async (upd) => { try { await GroupParticipantsUpdate(sock, upd, global.store || {}); } catch {} });
+				} catch(e) { console.log('[jadibot handler]', e.message); }
+				console.log(`✅ Session connected: +${cleanNumber}`);
+			}
+			if (connection === 'close') {
+				const reason = new Boom_s(lastDisconnect?.error)?.output?.statusCode;
+				if (reason === DR.loggedOut) {
+					delete global.botSessions[cleanNumber];
+					delete global.pairSessions[cleanNumber];
+					require('child_process').exec(`rm -rf ./database/jadibot/${cleanNumber}`);
+				} else { delete global.botSessions[cleanNumber]; }
+			}
+		});
+		let waited = 0;
+		while (!global.pairSessions[cleanNumber]?.code && waited < 15000) {
+			await new Promise(r => setTimeout(r, 500)); waited += 500;
+		}
+		const code = global.pairSessions[cleanNumber]?.code;
+		if (!code) return res.status(504).json({ status: false, message: 'Timeout. නැවත try කරන්න.' });
+		return res.json({ status: true, code, number: cleanNumber, message: 'WhatsApp > Linked Devices > Link with phone number' });
+	} catch(e) { return res.status(500).json({ status: false, message: e.message }); }
 });
 
-// ── Bot Connection Status (SSE — real-time) ───────────────────────────────────
-app.get('/api/events', panelAuth, (req, res) => {
+app.get('/api/session', (req, res) => {
+	const clean = (req.query.number||'').replace(/[^0-9]/g,'');
+	if (!clean) return res.status(400).json({ status: false });
+	res.json({ status: true, connected: !!(global.botSessions?.[clean]?.authState?.creds?.registered), number: clean });
+});
+
+app.get('/api/sessions', (req, res) => {
+	const sessions = Object.keys(global.botSessions||{}).map(n => ({
+		number: n, connected: !!(global.botSessions[n]?.authState?.creds?.registered), name: global.botSessions[n]?.user?.name||null
+	}));
+	res.json({ status: true, count: sessions.length, sessions });
+});
+
 	res.setHeader('Content-Type', 'text/event-stream');
 	res.setHeader('Cache-Control', 'no-cache');
 	res.setHeader('Connection', 'keep-alive');
