@@ -281,8 +281,13 @@ let makeWASocket, useMultiFileAuthState, Browsers, DisconnectReason, makeCacheab
 (async () => {
     try {
         const b = await import('baileys');
-        makeWASocket = b.default?.default || b.makeWASocket || b.default;
-        console.log('[Baileys] keys:', Object.keys(b).join(', '));
+        makeWASocket = b.makeWASocket;
+        useMultiFileAuthState = b.useMultiFileAuthState;
+        Browsers = b.Browsers;
+        DisconnectReason = b.DisconnectReason;
+        makeCacheableSignalKeyStore = b.makeCacheableSignalKeyStore;
+        fetchLatestWaWebVersion = b.fetchLatestWaWebVersion;
+        jidNormalizedUser = b.jidNormalizedUser;
         useMultiFileAuthState = b.useMultiFileAuthState;
         Browsers = b.Browsers;
         DisconnectReason = b.DisconnectReason;
