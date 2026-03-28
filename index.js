@@ -595,6 +595,11 @@ async function startnimaBot() {
 				console.log('⚠️ Multi-device mismatch — session keys clear + reconnect...');
 				exec('find ./nimadev -name "*.json" ! -name "creds.json" -delete', () => {});
 				setTimeout(() => startnimaBot(), _backoff);
+			} else if (reason === 515) {
+				// 515 = restartRequired (normal after pair code)
+				console.log('🔄 515 restartRequired — reconnect කරමින්...');
+				try { await saveCreds(); } catch(_) {}
+				setTimeout(() => { _reconnectCount = 0; startnimaBot(); }, 1500);
 			} else {
 				// connectionLost / connectionClosed / restartRequired / timedOut / unknown
 				// Exponential backoff reconnect
