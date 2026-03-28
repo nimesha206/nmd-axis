@@ -1,6 +1,3 @@
-const _baileysProxy = new Proxy({}, {
-    get(_, key) { return global._baileysModule?.[key]; }
-});
 process.on('uncaughtException', (err) => console.error('[uncaughtException]', err))
 process.on('unhandledRejection', (err) => console.error('[unhandledRejection]', err))
 
@@ -30,7 +27,8 @@ const moment = require('moment-timezone');
 const { performance } = require('perf_hooks');
 const PhoneNum = require('awesome-phonenumber');
 const { exec, spawn, execSync } = require('child_process');
-const { generateWAMessageContent, getContentType } = _baileysProxy;
+const generateWAMessageContent = (...a) => global._baileysModule?.generateWAMessageContent?.(...a) ?? global._baileysModule?.["generateWAMessageContent"];
+const getContentType = (...a) => global._baileysModule?.getContentType?.(...a) ?? global._baileysModule?.["getContentType"];
 
 const { UguuSe } = require('./lib/uploader');
 const TicTacToe = require('./lib/tictactoe');
