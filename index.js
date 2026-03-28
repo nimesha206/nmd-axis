@@ -279,6 +279,7 @@ const { parsePhoneNumber } = require('awesome-phonenumber');
 let makeWASocket, useMultiFileAuthState, Browsers, DisconnectReason, makeCacheableSignalKeyStore, fetchLatestWaWebVersion, jidNormalizedUser;
 // Baileys pre-load — stored as promise so startnimaBot can await it
 global._baileysReady = import('baileys').then(b => {
+    global._baileysModule = b;
     makeWASocket = b.makeWASocket;
     useMultiFileAuthState = b.useMultiFileAuthState;
     Browsers = b.Browsers;

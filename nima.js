@@ -27,7 +27,7 @@ const moment = require('moment-timezone');
 const { performance } = require('perf_hooks');
 const PhoneNum = require('awesome-phonenumber');
 const { exec, spawn, execSync } = require('child_process');
-const { generateWAMessageContent, getContentType } = require('baileys');
+const { generateWAMessageContent, getContentType } = global._baileysModule || {};
 
 const { UguuSe } = require('./lib/uploader');
 const TicTacToe = require('./lib/tictactoe');
