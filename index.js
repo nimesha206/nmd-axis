@@ -277,6 +277,22 @@ const { exec } = require('child_process');
 const { parsePhoneNumber } = require('awesome-phonenumber');
 // baileys import moved inside startnimaBot to avoid top-level await scope issues
 let makeWASocket, useMultiFileAuthState, Browsers, DisconnectReason, makeCacheableSignalKeyStore, fetchLatestWaWebVersion, jidNormalizedUser;
+// Baileys pre-load attempt at startup
+(async () => {
+    try {
+        const b = await import('baileys');
+        makeWASocket = b.default;
+        useMultiFileAuthState = b.useMultiFileAuthState;
+        Browsers = b.Browsers;
+        DisconnectReason = b.DisconnectReason;
+        makeCacheableSignalKeyStore = b.makeCacheableSignalKeyStore;
+        fetchLatestWaWebVersion = b.fetchLatestWaWebVersion;
+        jidNormalizedUser = b.jidNormalizedUser;
+        console.log('[Baileys] ✅ pre-load සාර්ථකයි | makeWASocket:', typeof makeWASocket);
+    } catch(e) {
+        console.error('[Baileys] ❌ pre-load error:', e.message);
+    }
+})();
 
 const { dataBase } = require('./src/database');
 const { app, server, PORT } = require('./src/server');
@@ -434,10 +450,10 @@ async function startnimaBot() {
 		return
 	}
 	
-	// Baileys import — CommonJS compatible
+	// Baileys ESM import — Node.js 24 + CommonJS wrapper compatible
 	if (!makeWASocket) {
-		const baileys = require('baileys');
-		makeWASocket = baileys.default || baileys.makeWASocket || baileys;
+		const baileys = await import('baileys');
+		makeWASocket = baileys.default;
 		useMultiFileAuthState = baileys.useMultiFileAuthState;
 		Browsers = baileys.Browsers;
 		DisconnectReason = baileys.DisconnectReason;
@@ -445,6 +461,7 @@ async function startnimaBot() {
 		fetchLatestWaWebVersion = baileys.fetchLatestWaWebVersion;
 		jidNormalizedUser = baileys.jidNormalizedUser;
 	}
+	if (typeof makeWASocket !== 'function') throw new Error('baileys load failed: makeWASocket is ' + typeof makeWASocket);
 	const WAConnection = makeWASocket;
 
 	const level = pino({ level: 'silent' });
