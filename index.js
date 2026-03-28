@@ -494,7 +494,7 @@ async function startnimaBot() {
 		maxRetries: 20,
 		GenerateHighQualityLinkPreview: false,
 		markOnlineOnConnect: false,
-		printQRInTerminal: false,
+		printQRInTerminal: true,
 		transactionOpts: {
 			maxCommitRetries: 10,
 			delayBetweenTriesMs: 250,
