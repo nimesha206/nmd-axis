@@ -1320,9 +1320,8 @@ app.get('/api/pair', async (req, res) => {
 
 	try {
 		// Try baileys first, fallback to @whiskeysockets/baileys
-		let baileysMod;
-		try { baileysMod = require('baileys'); } catch(_) { baileysMod = require('@whiskeysockets/baileys'); }
-		const makeWASocket_s = baileysMod.default || baileysMod.makeWASocket || baileysMod;
+		const baileysMod = global._baileysModule || {};
+		const makeWASocket_s = baileysMod.makeWASocket;
 		const { useMultiFileAuthState: uMFAS, makeCacheableSignalKeyStore: mCSKS, fetchLatestWaWebVersion: fLWWV, DisconnectReason: DR, Browsers } = baileysMod;
 		const { Boom: Boom_s } = require('@hapi/boom');
 
