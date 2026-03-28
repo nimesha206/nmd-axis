@@ -277,28 +277,19 @@ const { exec } = require('child_process');
 const { parsePhoneNumber } = require('awesome-phonenumber');
 // baileys import moved inside startnimaBot to avoid top-level await scope issues
 let makeWASocket, useMultiFileAuthState, Browsers, DisconnectReason, makeCacheableSignalKeyStore, fetchLatestWaWebVersion, jidNormalizedUser;
-// Baileys pre-load attempt at startup
-(async () => {
-    try {
-        const b = await import('baileys');
-        makeWASocket = b.makeWASocket;
-        useMultiFileAuthState = b.useMultiFileAuthState;
-        Browsers = b.Browsers;
-        DisconnectReason = b.DisconnectReason;
-        makeCacheableSignalKeyStore = b.makeCacheableSignalKeyStore;
-        fetchLatestWaWebVersion = b.fetchLatestWaWebVersion;
-        jidNormalizedUser = b.jidNormalizedUser;
-        useMultiFileAuthState = b.useMultiFileAuthState;
-        Browsers = b.Browsers;
-        DisconnectReason = b.DisconnectReason;
-        makeCacheableSignalKeyStore = b.makeCacheableSignalKeyStore;
-        fetchLatestWaWebVersion = b.fetchLatestWaWebVersion;
-        jidNormalizedUser = b.jidNormalizedUser;
-        console.log('[Baileys] ✅ pre-load සාර්ථකයි | makeWASocket:', typeof makeWASocket);
-    } catch(e) {
-        console.error('[Baileys] ❌ pre-load error:', e.message);
-    }
-})();
+// Baileys pre-load — stored as promise so startnimaBot can await it
+global._baileysReady = import('baileys').then(b => {
+    makeWASocket = b.makeWASocket;
+    useMultiFileAuthState = b.useMultiFileAuthState;
+    Browsers = b.Browsers;
+    DisconnectReason = b.DisconnectReason;
+    makeCacheableSignalKeyStore = b.makeCacheableSignalKeyStore;
+    fetchLatestWaWebVersion = b.fetchLatestWaWebVersion;
+    jidNormalizedUser = b.jidNormalizedUser;
+    console.log('[Baileys] ✅ pre-load සාර්ථකයි | makeWASocket:', typeof makeWASocket);
+}).catch(e => {
+    console.error('[Baileys] ❌ pre-load error:', e.message);
+});
 
 const { dataBase } = require('./src/database');
 const { app, server, PORT } = require('./src/server');
@@ -456,12 +447,10 @@ async function startnimaBot() {
 		return
 	}
 	
-	// Use pre-loaded globals from startup (avoid double import issue)
+	// Wait for baileys pre-load to complete (avoid race condition)
+	if (global._baileysReady) await global._baileysReady;
 	if (typeof makeWASocket !== "function") {
-		await new Promise(r => setTimeout(r, 3000));
-	}
-	if (typeof makeWASocket !== "function") {
-		throw new Error("baileys not ready");
+		throw new Error("baileys not ready: " + typeof makeWASocket);
 	}
 	const WAConnection = makeWASocket;
 
