@@ -456,22 +456,15 @@ async function startnimaBot() {
 		return
 	}
 	
-	// Baileys ESM import — Node.js 24 + CommonJS wrapper compatible
-	if (!makeWASocket) {
-		const baileys = await import('baileys');
-		makeWASocket = baileys.default;
-		useMultiFileAuthState = baileys.useMultiFileAuthState;
-		Browsers = baileys.Browsers;
-		DisconnectReason = baileys.DisconnectReason;
-		makeCacheableSignalKeyStore = baileys.makeCacheableSignalKeyStore;
-		fetchLatestWaWebVersion = baileys.fetchLatestWaWebVersion;
-		jidNormalizedUser = baileys.jidNormalizedUser;
+	// Use pre-loaded globals from startup (avoid double import issue)
+	if (typeof makeWASocket !== "function") {
+		await new Promise(r => setTimeout(r, 3000));
 	}
-	if (typeof makeWASocket !== 'function') {
-		console.error('[Baileys] makeWASocket type:', typeof makeWASocket, '— keys:', makeWASocket ? Object.keys(makeWASocket).slice(0,5).join(',') : 'null');
-		throw new Error('baileys load failed: makeWASocket is ' + typeof makeWASocket);
+	if (typeof makeWASocket !== "function") {
+		throw new Error("baileys not ready");
 	}
 	const WAConnection = makeWASocket;
+
 
 	const level = pino({ level: 'silent' });
 	const { version } = await fetchLatestWaWebVersion();
