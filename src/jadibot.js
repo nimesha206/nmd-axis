@@ -1,3 +1,6 @@
+const _baileysProxy = new Proxy({}, {
+    get(_, key) { return global._baileysModule?.[key]; }
+});
 require('../settings');
 const fs = require('fs');
 const pino = require('pino');
@@ -6,7 +9,7 @@ const { Boom } = require('@hapi/boom');
 const NodeCache = require('node-cache');
 const { exec, spawn, execSync } = require('child_process');
 const { parsePhoneNumber } = require('awesome-phonenumber');
-const { default: WAConnection, useMultiFileAuthState, Browsers, DisconnectReason, makeInMemoryStore, jidNormalizedUser, makeCacheableSignalKeyStore, fetchLatestBaileysVersion, proto, getAggregateVotesInPollMessage } = global._baileysModule || {};
+const { default: WAConnection, useMultiFileAuthState, Browsers, DisconnectReason, makeInMemoryStore, jidNormalizedUser, makeCacheableSignalKeyStore, fetchLatestBaileysVersion, proto, getAggregateVotesInPollMessage } = _baileysProxy;
 
 const { GroupCacheUpdate, GroupParticipantsUpdate, MessagesUpsert, Solving } = require('./message');
 
