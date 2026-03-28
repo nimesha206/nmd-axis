@@ -1,6 +1,3 @@
-const _baileysProxy = new Proxy({}, {
-    get(_, key) { return global._baileysModule?.[key]; }
-});
 require('../settings');
 const fs = require('fs');
 const path = require('path');
@@ -15,7 +12,29 @@ const groupMetadataTimers = {};
 const { checkStatus } = require('./database');
 const { imageToWebp, videoToWebp, writeExif, gifToWebp } = require('../lib/exif');
 const { getBuffer, getSizeMedia, fetchJson, sleep, axiosss, fixBytes } = require('../lib/function');
-const { jidNormalizedUser, proto, getBinaryNodeChildren, getBinaryNodeChildString, getBinaryNodeChild, generateMessageIDV2, jidEncode, encodeSignedDeviceIdentity, generateWAMessageContent, generateForwardMessageContent, prepareWAMessageMedia, delay, areJidsSameUser, extractMessageContent, generateMessageID, downloadContentFromMessage, downloadMediaMessage: baileysDownloadMedia, generateWAMessageFromContent, jidDecode, generateWAMessage, toBuffer, getContentType, getDevice } = _baileysProxy;
+const jidNormalizedUser = (...a) => global._baileysModule?.jidNormalizedUser?.(...a) ?? global._baileysModule?.["jidNormalizedUser"];
+const proto = new Proxy({}, { get(_, k) { return global._baileysModule?.proto?.[k]; } });
+const getBinaryNodeChildren = (...a) => global._baileysModule?.getBinaryNodeChildren?.(...a) ?? global._baileysModule?.["getBinaryNodeChildren"];
+const getBinaryNodeChildString = (...a) => global._baileysModule?.getBinaryNodeChildString?.(...a) ?? global._baileysModule?.["getBinaryNodeChildString"];
+const getBinaryNodeChild = (...a) => global._baileysModule?.getBinaryNodeChild?.(...a) ?? global._baileysModule?.["getBinaryNodeChild"];
+const generateMessageIDV2 = (...a) => global._baileysModule?.generateMessageIDV2?.(...a) ?? global._baileysModule?.["generateMessageIDV2"];
+const jidEncode = (...a) => global._baileysModule?.jidEncode?.(...a) ?? global._baileysModule?.["jidEncode"];
+const encodeSignedDeviceIdentity = (...a) => global._baileysModule?.encodeSignedDeviceIdentity?.(...a) ?? global._baileysModule?.["encodeSignedDeviceIdentity"];
+const generateWAMessageContent = (...a) => global._baileysModule?.generateWAMessageContent?.(...a) ?? global._baileysModule?.["generateWAMessageContent"];
+const generateForwardMessageContent = (...a) => global._baileysModule?.generateForwardMessageContent?.(...a) ?? global._baileysModule?.["generateForwardMessageContent"];
+const prepareWAMessageMedia = (...a) => global._baileysModule?.prepareWAMessageMedia?.(...a) ?? global._baileysModule?.["prepareWAMessageMedia"];
+const delay = (...a) => global._baileysModule?.delay?.(...a) ?? global._baileysModule?.["delay"];
+const areJidsSameUser = (...a) => global._baileysModule?.areJidsSameUser?.(...a) ?? global._baileysModule?.["areJidsSameUser"];
+const extractMessageContent = (...a) => global._baileysModule?.extractMessageContent?.(...a) ?? global._baileysModule?.["extractMessageContent"];
+const generateMessageID = (...a) => global._baileysModule?.generateMessageID?.(...a) ?? global._baileysModule?.["generateMessageID"];
+const downloadContentFromMessage = (...a) => global._baileysModule?.downloadContentFromMessage?.(...a) ?? global._baileysModule?.["downloadContentFromMessage"];
+const baileysDownloadMedia = (...a) => global._baileysModule?.downloadMediaMessage?.(...a) ?? global._baileysModule?.["downloadMediaMessage"];
+const generateWAMessageFromContent = (...a) => global._baileysModule?.generateWAMessageFromContent?.(...a) ?? global._baileysModule?.["generateWAMessageFromContent"];
+const jidDecode = (...a) => global._baileysModule?.jidDecode?.(...a) ?? global._baileysModule?.["jidDecode"];
+const generateWAMessage = (...a) => global._baileysModule?.generateWAMessage?.(...a) ?? global._baileysModule?.["generateWAMessage"];
+const toBuffer = (...a) => global._baileysModule?.toBuffer?.(...a) ?? global._baileysModule?.["toBuffer"];
+const getContentType = (...a) => global._baileysModule?.getContentType?.(...a) ?? global._baileysModule?.["getContentType"];
+const getDevice = (...a) => global._baileysModule?.getDevice?.(...a) ?? global._baileysModule?.["getDevice"];
 
 /*
 	* Create By Nimesha Madhushan
@@ -494,7 +513,7 @@ async function Solving(nimesha, store) {
 	nimesha.decodeJid = (jid) => {
 		if (!jid) return jid
 		if (/:\d+@/gi.test(jid)) {
-			let decode = jidDecode(jid) || {}
+			let decode = global._baileysModule?.jidDecode?.(jid) || {}
 			return decode.user && decode.server && decode.user + '@' + decode.server || jid
 		} else return jid
 	}

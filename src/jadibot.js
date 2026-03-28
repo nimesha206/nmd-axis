@@ -1,6 +1,3 @@
-const _baileysProxy = new Proxy({}, {
-    get(_, key) { return global._baileysModule?.[key]; }
-});
 require('../settings');
 const fs = require('fs');
 const pino = require('pino');
@@ -9,7 +6,16 @@ const { Boom } = require('@hapi/boom');
 const NodeCache = require('node-cache');
 const { exec, spawn, execSync } = require('child_process');
 const { parsePhoneNumber } = require('awesome-phonenumber');
-const { default: WAConnection, useMultiFileAuthState, Browsers, DisconnectReason, makeInMemoryStore, jidNormalizedUser, makeCacheableSignalKeyStore, fetchLatestBaileysVersion, proto, getAggregateVotesInPollMessage } = _baileysProxy;
+const WAConnection = (...a) => global._baileysModule?.default?.(...a) ?? global._baileysModule?.["default"];
+const useMultiFileAuthState = (...a) => global._baileysModule?.useMultiFileAuthState?.(...a) ?? global._baileysModule?.["useMultiFileAuthState"];
+const Browsers = new Proxy({}, { get(_, k) { return global._baileysModule?.Browsers?.[k]; } });
+const DisconnectReason = new Proxy({}, { get(_, k) { return global._baileysModule?.DisconnectReason?.[k]; } });
+const makeInMemoryStore = (...a) => global._baileysModule?.makeInMemoryStore?.(...a) ?? global._baileysModule?.["makeInMemoryStore"];
+const jidNormalizedUser = (...a) => global._baileysModule?.jidNormalizedUser?.(...a) ?? global._baileysModule?.["jidNormalizedUser"];
+const makeCacheableSignalKeyStore = (...a) => global._baileysModule?.makeCacheableSignalKeyStore?.(...a) ?? global._baileysModule?.["makeCacheableSignalKeyStore"];
+const fetchLatestBaileysVersion = (...a) => global._baileysModule?.fetchLatestBaileysVersion?.(...a) ?? global._baileysModule?.["fetchLatestBaileysVersion"];
+const proto = new Proxy({}, { get(_, k) { return global._baileysModule?.proto?.[k]; } });
+const getAggregateVotesInPollMessage = (...a) => global._baileysModule?.getAggregateVotesInPollMessage?.(...a) ?? global._baileysModule?.["getAggregateVotesInPollMessage"];
 
 const { GroupCacheUpdate, GroupParticipantsUpdate, MessagesUpsert, Solving } = require('./message');
 
