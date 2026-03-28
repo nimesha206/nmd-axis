@@ -281,7 +281,8 @@ let makeWASocket, useMultiFileAuthState, Browsers, DisconnectReason, makeCacheab
 (async () => {
     try {
         const b = await import('baileys');
-        makeWASocket = b.default;
+        makeWASocket = b.default?.default || b.makeWASocket || b.default;
+        console.log('[Baileys] keys:', Object.keys(b).join(', '));
         useMultiFileAuthState = b.useMultiFileAuthState;
         Browsers = b.Browsers;
         DisconnectReason = b.DisconnectReason;
@@ -461,7 +462,10 @@ async function startnimaBot() {
 		fetchLatestWaWebVersion = baileys.fetchLatestWaWebVersion;
 		jidNormalizedUser = baileys.jidNormalizedUser;
 	}
-	if (typeof makeWASocket !== 'function') throw new Error('baileys load failed: makeWASocket is ' + typeof makeWASocket);
+	if (typeof makeWASocket !== 'function') {
+		console.error('[Baileys] makeWASocket type:', typeof makeWASocket, '— keys:', makeWASocket ? Object.keys(makeWASocket).slice(0,5).join(',') : 'null');
+		throw new Error('baileys load failed: makeWASocket is ' + typeof makeWASocket);
+	}
 	const WAConnection = makeWASocket;
 
 	const level = pino({ level: 'silent' });
