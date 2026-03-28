@@ -12,7 +12,7 @@ const groupMetadataTimers = {};
 const { checkStatus } = require('./database');
 const { imageToWebp, videoToWebp, writeExif, gifToWebp } = require('../lib/exif');
 const { getBuffer, getSizeMedia, fetchJson, sleep, axiosss, fixBytes } = require('../lib/function');
-const { jidNormalizedUser, proto, getBinaryNodeChildren, getBinaryNodeChildString, getBinaryNodeChild, generateMessageIDV2, jidEncode, encodeSignedDeviceIdentity, generateWAMessageContent, generateForwardMessageContent, prepareWAMessageMedia, delay, areJidsSameUser, extractMessageContent, generateMessageID, downloadContentFromMessage, downloadMediaMessage: baileysDownloadMedia, generateWAMessageFromContent, jidDecode, generateWAMessage, toBuffer, getContentType, getDevice } = require('baileys');
+const { jidNormalizedUser, proto, getBinaryNodeChildren, getBinaryNodeChildString, getBinaryNodeChild, generateMessageIDV2, jidEncode, encodeSignedDeviceIdentity, generateWAMessageContent, generateForwardMessageContent, prepareWAMessageMedia, delay, areJidsSameUser, extractMessageContent, generateMessageID, downloadContentFromMessage, downloadMediaMessage: baileysDownloadMedia, generateWAMessageFromContent, jidDecode, generateWAMessage, toBuffer, getContentType, getDevice } = global._baileysModule || {};
 
 /*
 	* Create By Nimesha Madhushan
